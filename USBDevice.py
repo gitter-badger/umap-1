@@ -380,7 +380,10 @@ class USBDevice:
             self.maxusb_app.stall_ep0()
 
     def handle_get_configuration_descriptor_request(self, num):
-        return self.configurations[num].get_descriptor()
+        if num < len(self.configurations):
+            return self.configurations[num].get_descriptor()
+        else:
+            return self.configurations[0].get_descriptor()
 
     def handle_get_string_descriptor_request(self, num):
         if num == 0:
