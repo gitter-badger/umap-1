@@ -7,28 +7,11 @@ from USBDevice import *
 from USBConfiguration import *
 from USBInterface import *
 from USBEndpoint import *
-
-
-def mutable(stage):
-    def wrap_f(func):
-        def wrapper(self, *args, **kwargs):
-            response = self.get_mutation(stage=stage)
-            if response:
-                self.logger.info('Got mutation for stage %s' % stage)
-            else:
-                response = func(self, *args[1:], **kwargs)
-            return response
-        return wrapper
-    return wrap_f
+from .fuzzing import mutable
 
 
 class USBKeyboardClass(USBClass):
     name = "USB Keyboard class"
-
-    def __init__(self, maxusb_app):
-
-        self.maxusb_app = maxusb_app
-        self.setup_request_handlers()
 
     def setup_request_handlers(self):
         self.request_handlers = {
@@ -39,15 +22,15 @@ class USBKeyboardClass(USBClass):
 
     def handle_set_idle(self, req):
         response = b''
-        self.maxusb_app.send_on_endpoint(0, response)
+        self.app.send_on_endpoint(0, response)
 
     def handle_get_report(self, req):
         response = b''
-        self.maxusb_app.send_on_endpoint(0, response)
+        self.app.send_on_endpoint(0, response)
 
     def handle_set_report(self, req):
         response = b''
-        self.maxusb_app.send_on_endpoint(0, response)
+        self.app.send_on_endpoint(0, response)
 
 
 class USBKeyboardInterface(USBInterface):
@@ -55,9 +38,6 @@ class USBKeyboardInterface(USBInterface):
 
     def __init__(self, maxusb_app, verbose=0):
         self.maxusb_app = maxusb_app
-
-        report_descriptor = self.get_report_descriptor()
-        hid_descriptor = self.get_hid_descriptor()
 
         descriptors = {
             USB.desc_type_hid: self.get_hid_descriptor,
@@ -91,7 +71,7 @@ class USBKeyboardInterface(USBInterface):
             descriptors
         )
 
-        self.device_class = USBKeyboardClass(maxusb_app)
+        self.device_class = USBKeyboardClass(maxusb_app, verbose)
 
         empty_preamble = [0x00] * 10
         text = [0x0f, 0x00, 0x16, 0x00, 0x28, 0x00]
@@ -182,18 +162,16 @@ class USBKeyboardInterface(USBInterface):
     def handle_buffer_available(self):
         if not self.keys:
             if self.maxusb_app.mode == 1:
-                print (" **SUPPORTED**",end="")
+                print(" **SUPPORTED**", end="")
                 if self.maxusb_app.fplog:
-                    self.maxusb_app.fplog.write (" **SUPPORTED**\n")
+                    self.maxusb_app.fplog.write(" **SUPPORTED**\n")
                 self.maxusb_app.stop = True
-
             return
-
         letter = self.keys.pop(0)
         self.type_letter(letter)
 
     def type_letter(self, letter, modifiers=0):
-        data = bytes([ 0, 0, ord(letter) ])
+        data = bytes([0, 0, ord(letter)])
 
         if self.verbose > 4:
             print(self.name, "sending keypress 0x%02x" % ord(letter))
@@ -205,8 +183,6 @@ class USBKeyboardDevice(USBDevice):
     name = "USB keyboard device"
 
     def __init__(self, maxusb_app, vid, pid, rev, verbose=0, **kwargs):
-
-
         interface = USBKeyboardInterface(maxusb_app, verbose=verbose)
 
         if vid == 0x1111:
@@ -220,11 +196,10 @@ class USBKeyboardDevice(USBDevice):
                 maxusb_app,
                 1,                                          # index
                 "Emulated Keyboard",    # string desc
-                [ interface ]                  # interfaces
+                [interface]                  # interfaces
         )
 
-        USBDevice.__init__(
-                self,
+        super(USBKeyboardDevice, self).__init__(
                 maxusb_app,
                 0,                      # 0 device class
 		        0,                      # device subclass
@@ -236,7 +211,7 @@ class USBKeyboardDevice(USBDevice):
                 "Dell",                 # manufacturer string
                 "Dell USB Entry Keyboard",   # product string
                 "00001",                # serial number string
-                [ config ],
+                [config],
                 verbose=verbose
         )
 

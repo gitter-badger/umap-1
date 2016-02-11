@@ -4,16 +4,17 @@
 # sense) for implementing device classes (in the USB sense), eg, HID devices,
 # mass storage devices.
 
+
 class USBClass:
     name = "generic USB device class"
 
     # maps bRequest to handler function
-    request_handlers = { }
+    request_handlers = {}
 
-    def __init__(self, verbose=0):
+    def __init__(self, app, verbose=0):
+        self.app = app
         self.interface = None
         self.verbose = verbose
-
         self.setup_request_handlers()
 
     def set_interface(self, interface):
@@ -23,3 +24,5 @@ class USBClass:
         """To be overridden for subclasses to modify self.class_request_handlers"""
         pass
 
+    def get_mutation(self, stage, data=None):
+        return self.app.get_mutation(stage, data)

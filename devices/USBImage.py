@@ -94,7 +94,7 @@ class USBImageInterface(USBInterface):
                 descriptors
         )
 
-        self.device_class = USBImageClass()
+        self.device_class = USBImageClass(maxusb_app, verbose)
         self.device_class.set_interface(self)
 
 
