@@ -50,11 +50,11 @@ class MAXUSBApp(FacedancerApp):
     interrupt_level                 = 0x08
     full_duplex                     = 0x10
 
-    def __init__(self, device, logfp, mode, testcase, verbose=0):
+    def __init__(self, device, logfp, mode, testcase, verbose=0, fuzzer=None):
         FacedancerApp.__init__(self, device, verbose)
 
         self.connected_device = None
-
+        self.fuzzer = fuzzer
         self.mode = mode
         self.netserver_to_endpoint_sd = 0
         self.netserver_from_endpoint_sd = 0
@@ -80,6 +80,12 @@ class MAXUSBApp(FacedancerApp):
         # set duplex and negative INT level (from GoodFEDMAXUSB.py)
         self.write_register(self.reg_pin_control,
                 self.full_duplex | self.interrupt_level)
+
+    def get_mutation(self, stage, data=None):
+        if self.fuzzer:
+            data = {} if data is None else data
+            return self.fuzzer.get_mutation(stage=stage, data=data)
+        return None
 
     def init_commands(self):
         self.read_register_cmd  = FacedancerCommand(self.app_num, 0x00, b'')

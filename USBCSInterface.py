@@ -24,6 +24,8 @@ class USBCSInterface:
             11 : self.handle_set_interface_request
         }
 
+    def get_mutation(self, stage, data=None):
+        return self.maxusb_app.get_mutation(stage, data)
 
     # USB 2.0 specification, section 9.4.3 (p 281 of pdf)
     # HACK: blatant copypasta from USBDevice pains me deeply

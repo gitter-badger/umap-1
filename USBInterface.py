@@ -43,6 +43,9 @@ class USBInterface:
     def set_configuration(self, config):
         self.configuration = config
 
+    def get_mutation(self, stage, data=None):
+        return self.maxusb_app.get_mutation(stage, data)
+
     # USB 2.0 specification, section 9.4.3 (p 281 of pdf)
     # HACK: blatant copypasta from USBDevice pains me deeply
     def handle_get_descriptor_request(self, req):
@@ -120,8 +123,11 @@ class USBInterface:
         if self.iclass:
             iclass_desc_num = USB.interface_class_to_descriptor_type(self.iclass)
             if iclass_desc_num:
-                d += self.descriptors[iclass_desc_num]
-    
+                desc = self.descriptors[iclass_desc_num]
+                if callable(desc):
+                    desc = desc()
+                d += desc
+
         for e in self.cs_interfaces:
             d += e.get_descriptor()
 
