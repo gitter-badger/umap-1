@@ -193,25 +193,25 @@ class USBKeyboardDevice(USBDevice):
             rev = 0x0178
 
         config = USBConfiguration(
-                maxusb_app,
-                1,                                          # index
-                "Emulated Keyboard",    # string desc
-                [interface]                  # interfaces
+            maxusb_app=maxusb_app,
+            configuration_index=1,
+            configuration_string="Emulated Keyboard",
+            interfaces=[interface]
         )
 
         super(USBKeyboardDevice, self).__init__(
-                maxusb_app,
-                0,                      # 0 device class
-		        0,                      # device subclass
-                0,                      # protocol release number
-                64,                     # max packet size for endpoint 0
-		        vid,                    # vendor id
-                pid,                    # product id
-		        rev,                    # device revision
-                "Dell",                 # manufacturer string
-                "Dell USB Entry Keyboard",   # product string
-                "00001",                # serial number string
-                [config],
-                verbose=verbose
+            maxusb_app=maxusb_app,
+            device_class=0,
+            device_subclass=0,
+            protocol_rel_num=0,
+            max_packet_size_ep0=64,
+            vendor_id=vid,
+            product_id=pid,
+            device_rev=rev,
+            manufacturer_string="Dell",
+            product_string="Dell USB Entry Keyboard",
+            serial_number_string="00001",
+            configurations=[config],
+            descriptors={},
+            verbose=verbose
         )
-
