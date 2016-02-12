@@ -45,30 +45,29 @@ class USBKeyboardInterface(USBInterface):
         }
 
         endpoint = USBEndpoint(
-            maxusb_app,
-            3,          # endpoint number
-            USBEndpoint.direction_in,
-            USBEndpoint.transfer_type_interrupt,
-            USBEndpoint.sync_type_none,
-            USBEndpoint.usage_type_data,
-            16384,      # max packet size
-            10,         # polling interval, see USB 2.0 spec Table 9-13
-            self.handle_buffer_available    # handler function
+            maxusb_app=maxusb_app,
+            number=3,
+            direction=USBEndpoint.direction_in,
+            transfer_type=USBEndpoint.transfer_type_interrupt,
+            sync_type=USBEndpoint.sync_type_none,
+            usage_type=USBEndpoint.usage_type_data,
+            max_packet_size=16384,
+            interval=10,
+            handler=self.handle_buffer_available
         )
 
         # TODO: un-hardcode string index (last arg before "verbose")
-        USBInterface.__init__(
-            self,
-            maxusb_app,
-            0,          # interface number
-            0,          # alternate setting
-            3,          # 3 interface class
-            0,          # 0 subclass
-            0,          # 0 protocol
-            0,          # string index
-            verbose,
-            [endpoint],
-            descriptors
+        super(USBKeyboardInterface, self).__init__(
+            maxusb_app=maxusb_app,
+            interface_number=0,
+            interface_alternate=0,
+            interface_class=3,
+            interface_subclass=0,
+            interface_protocol=0,
+            interface_string_index=0,
+            verbose=verbose,
+            endpoints=[endpoint],
+            descriptors=descriptors
         )
 
         self.device_class = USBKeyboardClass(maxusb_app, verbose)
