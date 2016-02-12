@@ -9,61 +9,37 @@ from USBInterface import *
 from USBCSInterface import *
 from USBEndpoint import *
 from USBCSEndpoint import *
-from .fuzzing import mutable
+from .wrappers import mutable
 
 
 class USBAudioClass(USBClass):
     name = "USB Audio class"
 
     def setup_request_handlers(self):
+        self.local_responses = {
+            0x0a: ('audio_set_idle_response', b''),
+            0x83: ('audio_get_max_response', b'\xf0\xff'),
+            0x82: ('audio_get_min_response', b'\xa0\xe0'),
+            0x84: ('audio_get_res_response', b'\x30\x00'),
+            0x81: ('audio_get_cur_response', b''),
+            0x04: ('audio_set_res_response', b''),
+            0x01: ('audio_set_cur_response', b'')
+        }
         self.request_handlers = {
-            0x0a: self.handle_set_idle,
-            0x83: self.handle_get_max,
-            0x82: self.handle_get_min,
-            0x84: self.handle_get_res,
-            0x81: self.handle_get_cur,
-            0x04: self.handle_set_res,
-            0x01: self.handle_set_cur
+            x: self.handle_all for x in self.local_responses
         }
 
-    def handle_get_max(self, req):
-        response = b'\xf0\xff'
+    def handle_all(self, req):
+        stage, default_response = self.local_responses[req.request]
+        response = self.get_mutation(stage=stage)
+        if response is None:
+            response = default_response
         self.app.send_on_endpoint(0, response)
-        self.supported()
-
-    def handle_get_min(self, req):
-        response = b'\xa0\xe0'
-        self.app.send_on_endpoint(0, response)
-        self.supported()
-
-    def handle_get_res(self, req):
-        response = b'\x30\x00'
-        self.app.send_on_endpoint(0, response)
-        self.supported()
-
-    def handle_get_cur(self, req):
-        response = b''
-        # response = b'\x80\xfd'
-        self.app.send_on_endpoint(0, response)
-        self.supported()
-
-    def handle_set_res(self, req):
-        response = b''
-        self.app.send_on_endpoint(0, response)
-        self.supported()
-
-    def handle_set_cur(self, req):
-        response = b''
-        self.app.send_on_endpoint(0, response)
-        self.supported()
-
-    def handle_set_idle(self, req):
-        self.app.send_on_endpoint(0, b'')
         self.supported()
 
     def supported(self):
         if self.app.mode == 1:
-            print (" **SUPPORTED**", end="")
+            print (' **SUPPORTED**')
             if self.app.fplog:
                 self.app.fplog.write(" **SUPPORTED**\n")
             self.app.stop = True
@@ -228,9 +204,9 @@ class USBAudioInterface(USBInterface):
         ]
 
         if self.int_num == 3:
-                endpoints = endpoints0
+            endpoints = endpoints0
         else:
-                endpoints = []
+            endpoints = []
 
         if self.int_num == 0:
             cs_interfaces = cs_interfaces0
@@ -262,6 +238,7 @@ class USBAudioInterface(USBInterface):
         self.device_class = USBAudioClass(maxusb_app)
         self.device_class.set_interface(self)
 
+    @mutable('audio_data_available')
     def handle_data_available(self, data):
         if self.verbose > 0:
             print(self.name, "handling", len(data), "bytes of audio data")

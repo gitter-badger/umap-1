@@ -9,7 +9,8 @@ import sys
 class USBDevice:
     name = "generic device"
 
-    def __init__(self, maxusb_app, device_class, device_subclass,
+    def __init__(
+            self, maxusb_app, device_class, device_subclass,
             protocol_rel_num, max_packet_size_ep0, vendor_id, product_id,
             device_rev, manufacturer_string, product_string,
             serial_number_string, configurations=[], descriptors={},
@@ -20,24 +21,20 @@ class USBDevice:
         self.supported_device_class_trigger = False
         self.supported_device_class_count = 0
 
+        self.strings = []
 
-        self.strings = [ ]
-
-        self.usb_spec_version           = 0x0002
-        self.device_class               = device_class
-        self.device_subclass            = device_subclass
-        self.protocol_rel_num           = protocol_rel_num
-        self.max_packet_size_ep0        = max_packet_size_ep0
-        self.vendor_id                  = vendor_id
-        self.product_id                 = product_id
-        self.device_rev                 = device_rev
+        self.usb_spec_version = 0x0002
+        self.device_class = device_class
+        self.device_subclass = device_subclass
+        self.protocol_rel_num = protocol_rel_num
+        self.max_packet_size_ep0 = max_packet_size_ep0
+        self.vendor_id = vendor_id
+        self.product_id = product_id
+        self.device_rev = device_rev
 
         self.manufacturer_string_id = self.get_string_id(manufacturer_string)
         self.product_string_id = self.get_string_id(product_string)
         self.serial_number_string_id = self.get_string_id(serial_number_string)
-
-
-
 
         # maps from USB.desc_type_* to bytearray OR callable
         self.descriptors = descriptors
@@ -46,9 +43,6 @@ class USBDevice:
         self.descriptors[USB.desc_type_string] = self.handle_get_string_descriptor_request
         self.descriptors[USB.desc_type_hub] = self.handle_get_hub_descriptor_request
         self.descriptors[USB.desc_type_device_qualifier] = self.handle_get_device_qualifier_descriptor_request
-
-
-
 
         self.config_num = -1
         self.configuration = None
@@ -79,17 +73,17 @@ class USBDevice:
     def setup_request_handlers(self):
         # see table 9-4 of USB 2.0 spec, page 279
         self.request_handlers = {
-             0 : self.handle_get_status_request,
-             1 : self.handle_clear_feature_request,
-             3 : self.handle_set_feature_request,
-             5 : self.handle_set_address_request,
-             6 : self.handle_get_descriptor_request,
-             7 : self.handle_set_descriptor_request,
-             8 : self.handle_get_configuration_request,
-             9 : self.handle_set_configuration_request,
-            10 : self.handle_get_interface_request,
-            11 : self.handle_set_interface_request,
-            12 : self.handle_synch_frame_request
+            0: self.handle_get_status_request,
+            1: self.handle_clear_feature_request,
+            3: self.handle_set_feature_request,
+            5: self.handle_set_address_request,
+            6: self.handle_get_descriptor_request,
+            7: self.handle_set_descriptor_request,
+            8: self.handle_get_configuration_request,
+            9: self.handle_set_configuration_request,
+            10: self.handle_get_interface_request,
+            11: self.handle_set_interface_request,
+            12: self.handle_synch_frame_request
         }
 
     def connect(self):
@@ -108,8 +102,6 @@ class USBDevice:
         if self.maxusb_app.netserver_from_endpoint_sd:
             self.maxusb_app.netserver_from_endpoint_sd.close()
 
-
-
         self.state = USB.state_detached
 
     def run(self):
@@ -125,8 +117,8 @@ class USBDevice:
         bMaxPacketSize0 = self.max_packet_size_ep0
 
         d = bytearray([
-            bLength,       
-            bDescriptorType,       
+            bLength,
+            bDescriptorType,
             (self.usb_spec_version >> 8) & 0xff,
             self.usb_spec_version & 0xff,
             self.device_class,
@@ -168,13 +160,10 @@ class USBDevice:
             self.protocol_rel_num,
             bMaxPacketSize0,
             bNumConfigurations,
-            bReserved    
+            bReserved
         ])
 
         return d
-
-
-
 
     def handle_request(self, req):
         if self.verbose > 3:
@@ -192,9 +181,7 @@ class USBDevice:
         elif recipient_type == USB.request_recipient_endpoint:
             recipient = self.endpoints.get(index, None)
         elif recipient_type == USB.request_recipient_other:
-            recipient = self.configuration.interfaces[0]    #HACK for Hub class
-
-
+            recipient = self.configuration.interfaces[0]    # HACK for Hub class
 
         if not recipient:
             if self.verbose > 0:
@@ -212,19 +199,15 @@ class USBDevice:
         elif req_type == USB.request_type_vendor:
             handler_entity = recipient.device_vendor
 
-
-
         if not handler_entity:
             if self.verbose > 0:
                 print(self.name, "invalid handler entity, stalling")
             self.maxusb_app.stall_ep0()
             return
 
-
-
-        if handler_entity == 9:         #HACK: for hub class
+        if handler_entity == 9:  # HACK: for hub class
             handler_entity = recipient
-        
+
         handler = handler_entity.request_handlers.get(req.request, None)
 
 #        print ("DEBUG: Recipient=", recipient)

@@ -7,7 +7,7 @@ from USBDevice import *
 from USBConfiguration import *
 from USBInterface import *
 from USBEndpoint import *
-from .fuzzing import mutable
+from .wrappers import mutable
 
 
 class USBKeyboardClass(USBClass):
