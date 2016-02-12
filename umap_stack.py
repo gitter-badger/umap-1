@@ -16,12 +16,15 @@ Options:
     -v --verbose                verbosity level
 '''
 import docopt
+import traceback
+import time
 from kitty.remote.rpc import RpcClient
 from Facedancer import Facedancer
 from MAXUSBApp import MAXUSBApp
 from serial import Serial, PARITY_NONE
 
 from devices.USBKeyboard import USBKeyboardDevice
+from devices.USBAudio import USBAudioDevice
 
 list_cmd = 'umap_stack.py list classes'
 
@@ -32,9 +35,18 @@ class_map = {
         'params': {
             'default_vid': 0x413c,
             'default_pid': 0x2107,
-            'default_rev': 0x178,
+            'default_rev': 0x0178,
         },
     },
+    'audio': {
+        'fd_class': USBAudioDevice,
+        'classes': [1],
+        'params': {
+            'default_vid': 0x041e,
+            'default_pid': 0x0402,
+            'default_rev': 0x0100,
+        }
+    }
 }
 
 default_params = {
@@ -47,11 +59,12 @@ default_params = {
 
 
 def build_fuzzer(options):
+    return None
     fuzzer = RpcClient(host=options['--fuzzer-host'], port=int(options['--fuzzer-port']))
     return fuzzer
 
 
-def build_umap(fuzzer, options):
+def build_device(fuzzer, options):
     sp = Serial(options['--port'], 115200, parity=PARITY_NONE, timeout=2)
     verbosity = options['--verbose']
     logfp = None
@@ -67,17 +80,24 @@ def build_umap(fuzzer, options):
     params.update(device_config['params'])
     params['verbose'] = verbosity
     device = device_config['fd_class'](app, **params)
-    print(device)
+    return device
 
 
-def run_umap(umap, options):
-    pass
+def run_device(device, options):
+    try:
+        device.connect()
+        device.run()
+        time.sleep(5)
+    except:
+        print('Got exception while connecting/running device')
+        print(traceback.format_exc())
+    device.disconnect()
 
 
 def kmap_fuzz(options):
     fuzzer = build_fuzzer(options)
-    umap = build_umap(fuzzer, options)
-    umap = run_umap(umap, options)
+    umap = build_device(fuzzer, options)
+    run_device(umap, options)
 
 
 def kmap_list(options):
