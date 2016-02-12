@@ -93,20 +93,9 @@ class USBInterface:
     # Table 9-12 of USB 2.0 spec (pdf page 296)
     def get_descriptor(self):
 
-        if self.maxusb_app.testcase[1] == "int_bLength":
-            bLength = self.maxusb_app.testcase[2]
-        else:
-            bLength = 9
-
-        if self.maxusb_app.testcase[1] == "int_bDescriptorType":
-            bDescriptorType = self.maxusb_app.testcase[2]
-        else:
-            bDescriptorType = 4
-
-        if self.maxusb_app.testcase[1] == "int_bNumEndpoints":
-            bNumEndpoints = self.maxusb_app.testcase[2]
-        else:
-            bNumEndpoints = len(self.endpoints)
+        bLength = 9
+        bDescriptorType = 4
+        bNumEndpoints = len(self.endpoints)
 
         d = bytearray([
                 bLength,          # length of descriptor in bytes

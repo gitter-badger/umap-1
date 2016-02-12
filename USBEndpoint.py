@@ -48,36 +48,20 @@ class USBEndpoint:
             self.interface.configuration.device.maxusb_app.send_on_endpoint(0, b'')
 
     def set_interface(self, interface):
-
-
         self.interface = interface
 
     # see Table 9-13 of USB 2.0 spec (pdf page 297)
     def get_descriptor(self):
-        address = (self.number & 0x0f) | (self.direction << 7) 
-        attributes = (self.transfer_type & 0x03) \
-                   | ((self.sync_type & 0x03) << 2) \
-                   | ((self.usage_type & 0x03) << 4)
-
-        if self.maxusb_app.testcase[1] == "end_bLength":
-            bLength = self.maxusb_app.testcase[2]
-        else:
-            bLength = 7
-
-        if self.maxusb_app.testcase[1] == "end_bDescriptorType":
-            bDescriptorType = self.maxusb_app.testcase[2]
-        else:
-            bDescriptorType = 5
-
-        if self.maxusb_app.testcase[1] == "end_bEndpointAddress":
-            bEndpointAddress = self.maxusb_app.testcase[2]
-        else:
-            bEndpointAddress = address
-
-        if self.maxusb_app.testcase[1] == "end_wMaxPacketSize":
-            wMaxPacketSize = self.maxusb_app.testcase[2]
-        else:
-            wMaxPacketSize = self.max_packet_size
+        address = (self.number & 0x0f) | (self.direction << 7)
+        attributes = (
+            (self.transfer_type & 0x03) |
+            ((self.sync_type & 0x03) << 2) |
+            ((self.usage_type & 0x03) << 4)
+        )
+        bLength = 7
+        bDescriptorType = 5
+        bEndpointAddress = address
+        wMaxPacketSize = self.max_packet_size
 
         d = bytearray([
                 bLength,          # length of descriptor in bytes

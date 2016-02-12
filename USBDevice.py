@@ -32,20 +32,9 @@ class USBDevice:
         self.product_id                 = product_id
         self.device_rev                 = device_rev
 
-        if self.maxusb_app.testcase[1] == "string_Manufacturer":
-            self.manufacturer_string_id = self.get_string_id(self.maxusb_app.testcase[2])
-        else:
-            self.manufacturer_string_id = self.get_string_id(manufacturer_string)
-
-        if self.maxusb_app.testcase[1] == "string_Product":
-            self.product_string_id = self.get_string_id(self.maxusb_app.testcase[2])
-        else:
-            self.product_string_id = self.get_string_id(product_string)
-
-        if self.maxusb_app.testcase[1] == "string_Serial":
-            self.serial_number_string_id = self.get_string_id(self.maxusb_app.testcase[2])
-        else:
-            self.serial_number_string_id = self.get_string_id(serial_number_string)
+        self.manufacturer_string_id = self.get_string_id(manufacturer_string)
+        self.product_string_id = self.get_string_id(product_string)
+        self.serial_number_string_id = self.get_string_id(serial_number_string)
 
 
 
@@ -131,20 +120,9 @@ class USBDevice:
 
     def get_descriptor(self, n):
 
-        if self.maxusb_app.testcase[1] == "dev_bLength":
-            bLength = self.maxusb_app.testcase[2]
-        else:
-            bLength = 18
-
-        if self.maxusb_app.testcase[1] == "dev_bDescriptorType":
-            bDescriptorType = self.maxusb_app.testcase[2]
-        else:
-            bDescriptorType = 1
-
-        if self.maxusb_app.testcase[1] == "dev_bMaxPacketSize0":
-            bMaxPacketSize0 = self.maxusb_app.testcase[2]
-        else:
-            bMaxPacketSize0 = self.max_packet_size_ep0
+        bLength = 18
+        bDescriptorType = 1
+        bMaxPacketSize0 = self.max_packet_size_ep0
 
         d = bytearray([
             bLength,       
@@ -414,38 +392,14 @@ class USBDevice:
         return d
 
     def handle_get_hub_descriptor_request(self, num):
-        if self.maxusb_app.testcase[1] == "hub_bLength":
-            bLength = self.maxusb_app.testcase[2]
-        else:
-            bLength = 9
-        if self.maxusb_app.testcase[1] == "hub_bDescriptorType":
-            bDescriptorType = self.maxusb_app.testcase[2]
-        else:
-            bDescriptorType = 0x29
-        if self.maxusb_app.testcase[1] == "hub_bNbrPorts":
-            bNbrPorts = self.maxusb_app.testcase[2]
-        else:
-            bNbrPorts = 4
-        if self.maxusb_app.testcase[1] == "hub_wHubCharacteristics":
-            wHubCharacteristics = self.maxusb_app.testcase[2]
-        else:
-            wHubCharacteristics = 0xe000
-        if self.maxusb_app.testcase[1] == "hub_bPwrOn2PwrGood":
-            bPwrOn2PwrGood = self.maxusb_app.testcase[2]
-        else:
-            bPwrOn2PwrGood = 0x32
-        if self.maxusb_app.testcase[1] == "hub_bHubContrCurrent":
-            bHubContrCurrent = self.maxusb_app.testcase[2]
-        else:
-            bHubContrCurrent = 0x64
-        if self.maxusb_app.testcase[1] == "hub_DeviceRemovable":
-            DeviceRemovable = self.maxusb_app.testcase[2]
-        else:
-            DeviceRemovable = 0
-        if self.maxusb_app.testcase[1] == "hub_PortPwrCtrlMask":
-            PortPwrCtrlMask = self.maxusb_app.testcase[2]
-        else:
-            PortPwrCtrlMask = 0xff
+        bLength = 9
+        bDescriptorType = 0x29
+        bNbrPorts = 4
+        wHubCharacteristics = 0xe000
+        bPwrOn2PwrGood = 0x32
+        bHubContrCurrent = 0x64
+        DeviceRemovable = 0
+        PortPwrCtrlMask = 0xff
 
         hub_descriptor = bytes([
                 bLength,                        # length of descriptor in bytes
