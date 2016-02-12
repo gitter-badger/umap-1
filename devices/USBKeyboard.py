@@ -73,7 +73,8 @@ class USBKeyboardInterface(USBInterface):
         self.device_class = USBKeyboardClass(maxusb_app, verbose)
 
         empty_preamble = [0x00] * 10
-        text = [0x0f, 0x00, 0x16, 0x00, 0x28, 0x00]
+        # text = [0x0f, 0x00, 0x16, 0x00, 0x28, 0x00]
+        text = []
 
         self.keys = [chr(x) for x in empty_preamble + text]
 
@@ -97,12 +98,7 @@ class USBKeyboardInterface(USBInterface):
             bDescriptorType2 +
             wDescriptorLength
         )
-
-        if self.maxusb_app.testcase[1] == "HID_bLength":
-            bLength = self.maxusb_app.testcase[2]
-        else:
-            bLength = bytes([len(hid_descriptor) + 1])
-
+        bLength = bytes([len(hid_descriptor) + 1])
         hid_descriptor = bLength + hid_descriptor
         return hid_descriptor
 
@@ -161,7 +157,7 @@ class USBKeyboardInterface(USBInterface):
     def handle_buffer_available(self):
         if not self.keys:
             if self.maxusb_app.mode == 1:
-                print(" **SUPPORTED**", end="")
+                print(' **SUPPORTED**')
                 if self.maxusb_app.fplog:
                     self.maxusb_app.fplog.write(" **SUPPORTED**\n")
                 self.maxusb_app.stop = True
@@ -183,21 +179,12 @@ class USBKeyboardDevice(USBDevice):
 
     def __init__(self, maxusb_app, vid, pid, rev, verbose=0, **kwargs):
         interface = USBKeyboardInterface(maxusb_app, verbose=verbose)
-
-        if vid == 0x1111:
-            vid = 0x413c
-        if pid == 0x2222:
-            pid = 0x2107
-        if rev == 0x3333:
-            rev = 0x0178
-
         config = USBConfiguration(
             maxusb_app=maxusb_app,
             configuration_index=1,
             configuration_string="Emulated Keyboard",
             interfaces=[interface]
         )
-
         super(USBKeyboardDevice, self).__init__(
             maxusb_app=maxusb_app,
             device_class=0,
