@@ -27,6 +27,7 @@ from devices.USBKeyboard import USBKeyboardDevice
 from devices.USBAudio import USBAudioDevice
 from devices.USBCDC import USBCDCDevice
 from devices.USBFtdi import USBFtdiDevice
+from devices.USBHub import USBHubDevice
 
 list_cmd = 'umap_stack.py list classes'
 
@@ -65,6 +66,15 @@ class_map = {
             'vid': 0x0403,
             'pid': 0x6001,
             'rev': 0x0001,
+        }
+    },
+    'hub': {
+        'fd_class': USBHubDevice,
+        'classes': [9],
+        'params': {
+            'vid': 0x05e3,
+            'pid': 0x0608,
+            'rev': 0x7764,
         }
     },
 }
