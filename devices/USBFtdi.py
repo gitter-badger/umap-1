@@ -37,6 +37,7 @@ class USBFtdiVendor(USBVendor):
         if response is None:
             response = handler(req)
         self.app.send_on_endpoint(0, response)
+        self.supported()
 
     def handle_reset_request(self, req):
         if self.verbose > 0:
