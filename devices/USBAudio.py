@@ -37,13 +37,6 @@ class USBAudioClass(USBClass):
         self.app.send_on_endpoint(0, response)
         self.supported()
 
-    def supported(self):
-        if self.app.mode == 1:
-            print (' **SUPPORTED**')
-            if self.app.fplog:
-                self.app.fplog.write(" **SUPPORTED**\n")
-            self.app.stop = True
-
 
 class USBAudioInterface(USBInterface):
     name = "USB audio interface"
@@ -191,15 +184,15 @@ class USBAudioInterface(USBInterface):
 
         endpoints0 = [
             USBEndpoint(
-                maxusb_app,
-                1,           # endpoint address
-                USBEndpoint.direction_in,
-                USBEndpoint.transfer_type_interrupt,
-                USBEndpoint.sync_type_none,
-                USBEndpoint.usage_type_data,
-                0x0400,         # max packet size
-                0x02,           # polling interval, see USB 2.0 spec Table 9-13
-                self.handle_data_available    # handler function
+                maxusb_app=maxusb_app,
+                number=1,
+                direction=USBEndpoint.direction_in,
+                transfer_type=USBEndpoint.transfer_type_interrupt,
+                sync_type=USBEndpoint.sync_type_none,
+                usage_type=USBEndpoint.usage_type_data,
+                max_packet_size=0x0400,
+                interval=0x02,
+                handler=self.handle_data_available
             )
         ]
 
@@ -261,10 +254,6 @@ class USBAudioDevice(USBDevice):
     name = "USB audio device"
 
     def __init__(self, maxusb_app, vid, pid, rev, verbose=0, **kwargs):
-
-        int_class = 1
-        int_subclass = 1
-        int_proto = 0
         interface0 = USBAudioInterface(0, maxusb_app, 0x01, 0x01, 0x00, verbose=verbose)
         interface1 = USBAudioInterface(1, maxusb_app, 0x01, 0x02, 0x00, verbose=verbose)
         interface2 = USBAudioInterface(2, maxusb_app, 0x01, 0x02, 0x00, verbose=verbose)
@@ -305,17 +294,3 @@ class USBAudioDevice(USBDevice):
             descriptors={},
             verbose=verbose
         )
-
-
-
-
-
-
-
-
-
-
-
-
-
-

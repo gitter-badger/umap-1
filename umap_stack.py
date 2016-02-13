@@ -25,6 +25,7 @@ from serial import Serial, PARITY_NONE
 
 from devices.USBKeyboard import USBKeyboardDevice
 from devices.USBAudio import USBAudioDevice
+from devices.USBCDC import USBCDCDevice
 
 list_cmd = 'umap_stack.py list classes'
 
@@ -33,18 +34,27 @@ class_map = {
         'fd_class': USBKeyboardDevice,
         'classes': [3],
         'params': {
-            'default_vid': 0x413c,
-            'default_pid': 0x2107,
-            'default_rev': 0x0178,
+            'vid': 0x413c,
+            'pid': 0x2107,
+            'rev': 0x0178,
         },
     },
     'audio': {
         'fd_class': USBAudioDevice,
         'classes': [1],
         'params': {
-            'default_vid': 0x041e,
-            'default_pid': 0x0402,
-            'default_rev': 0x0100,
+            'vid': 0x041e,
+            'pid': 0x0402,
+            'rev': 0x0100,
+        }
+    },
+    'CDC': {
+        'fd_class': USBCDCDevice,
+        'classes': [2, 10],
+        'params': {
+            'vid': 0x2548,
+            'pid': 0x1001,
+            'rev': 0x1000,
         }
     }
 }
@@ -68,7 +78,7 @@ def build_device(fuzzer, options):
     sp = Serial(options['--port'], 115200, parity=PARITY_NONE, timeout=2)
     verbosity = options['--verbose']
     logfp = None
-    mode = 3
+    mode = 2
     current_testcase = None
     fd = Facedancer(sp, verbose=verbosity)
     app = MAXUSBApp(fd, logfp, mode, current_testcase, verbose=verbosity, fuzzer=fuzzer)
@@ -87,7 +97,6 @@ def run_device(device, options):
     try:
         device.connect()
         device.run()
-        time.sleep(5)
     except:
         print('Got exception while connecting/running device')
         print(traceback.format_exc())
