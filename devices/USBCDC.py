@@ -107,14 +107,14 @@ class USBCDCInterface(USBInterface):
             ),
             USBEndpoint(
                 maxusb_app=maxusb_app,
-                number=0x02,           # endpoint address
+                number=0x02,
                 direction=USBEndpoint.direction_out,
                 transfer_type=USBEndpoint.transfer_type_bulk,
                 sync_type=USBEndpoint.sync_type_none,
                 usage_type=USBEndpoint.usage_type_data,
-                max_packet_size=0x2000,         # max packet size
-                interval=0x00,           # polling interval, see USB 2.0 spec Table 9-13
-                handler=self.handle_data_available    # handler function
+                max_packet_size=0x2000,
+                interval=0x00,
+                handler=self.handle_data_available
             )
         ]
 

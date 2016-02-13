@@ -26,6 +26,7 @@ from serial import Serial, PARITY_NONE
 from devices.USBKeyboard import USBKeyboardDevice
 from devices.USBAudio import USBAudioDevice
 from devices.USBCDC import USBCDCDevice
+from devices.USBFtdi import USBFtdiDevice
 
 list_cmd = 'umap_stack.py list classes'
 
@@ -48,7 +49,7 @@ class_map = {
             'rev': 0x0100,
         }
     },
-    'CDC': {
+    'cdc': {
         'fd_class': USBCDCDevice,
         'classes': [2, 10],
         'params': {
@@ -56,7 +57,16 @@ class_map = {
             'pid': 0x1001,
             'rev': 0x1000,
         }
-    }
+    },
+    'ftdi': {
+        'fd_class': USBFtdiDevice,
+        'classes': [0xff],
+        'params': {
+            'vid': 0x0403,
+            'pid': 0x6001,
+            'rev': 0x0001,
+        }
+    },
 }
 
 default_params = {
