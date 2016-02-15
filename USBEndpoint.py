@@ -22,6 +22,21 @@ class USBEndpoint:
 
     def __init__(self, maxusb_app, number, direction, transfer_type, sync_type,
             usage_type, max_packet_size, interval, handler):
+        '''
+        :type maxusb_app: :class:`~MAXUSBApp.MAXUSBApp`
+        :param maxusb_app: application
+        :param number: endpoint number
+        :param direction: endpoint direction (direction_in/direction_out)
+        :param transfer_type: one of USBEndpoint.transfer_type\*
+        :param sync_type: one of USBEndpoint.sync_type\*
+        :param usage_type: on of USBEndpoint.usage_type\*
+        :param max_packet_size: maximum size of a packet
+        :param interval: TODO
+        :type handler:
+            func(data) -> None if direction is out,
+            func() -> None if direction is IN
+        :param handler: interrupt handler for the endpoint
+        '''
 
         self.maxusb_app         = maxusb_app
         self.number             = number
@@ -32,16 +47,13 @@ class USBEndpoint:
         self.max_packet_size    = max_packet_size
         self.interval           = interval
         self.handler            = handler
-
         self.interface          = None
 
         self.request_handlers   = {
-                1 : self.handle_clear_feature_request
+            1: self.handle_clear_feature_request
         }
 
     def handle_clear_feature_request(self, req):
-
-
         if self.maxusb_app.mode != 2:
             #print("received CLEAR_FEATURE request for endpoint", self.number,
             #        "with value", req.value)
@@ -64,13 +76,13 @@ class USBEndpoint:
         wMaxPacketSize = self.max_packet_size
 
         d = bytearray([
-                bLength,          # length of descriptor in bytes
-                bDescriptorType,          # descriptor type 5 == endpoint
-                bEndpointAddress,
-                attributes,
-                (wMaxPacketSize >> 8) & 0xff,
-                wMaxPacketSize & 0xff,
-                self.interval
+            bLength,          # length of descriptor in bytes
+            bDescriptorType,          # descriptor type 5 == endpoint
+            bEndpointAddress,
+            attributes,
+            (wMaxPacketSize >> 8) & 0xff,
+            wMaxPacketSize & 0xff,
+            self.interval
         ])
 
         return d

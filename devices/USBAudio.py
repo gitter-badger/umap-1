@@ -237,11 +237,11 @@ class USBAudioInterface(USBInterface):
             print(self.name, "handling", len(data), "bytes of audio data")
 
     @mutable('audio_hid_descriptor')
-    def get_hid_descriptor(self, **kwargs):
+    def get_hid_descriptor(self, *args, **kwargs):
         return b'\x09\x21\x10\x01\x00\x01\x22\x2b\x00'
 
     @mutable('audio_report_descriptor')
-    def get_report_descriptor(self, **kwargs):
+    def get_report_descriptor(self, *args, **kwargs):
         return(
             b'\x05\x0C\x09\x01\xA1\x01\x15\x00\x25\x01\x09\xE9\x09\xEA\x75' +
             b'\x01\x95\x02\x81\x02\x09\xE2\x09\x00\x81\x06\x05\x0B\x09\x20' +

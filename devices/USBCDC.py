@@ -2,6 +2,9 @@
 #
 # Contains class definitions to implement a USB CDC device.
 
+'''
+.. todo:: see here re-enpoints <http://janaxelson.com/usb_virtual_com_port.htm>_
+'''
 from USB import *
 from USBDevice import *
 from USBConfiguration import *

@@ -79,7 +79,7 @@ class USBKeyboardInterface(USBInterface):
         self.keys = [chr(x) for x in empty_preamble + text]
 
     @mutable('hid_descriptor')
-    def get_hid_descriptor(self, **kwargs):
+    def get_hid_descriptor(self, *args, **kwargs):
         report_descriptor = self.get_report_descriptor()
         bDescriptorType = b'\x21'  # HID
         bcdHID = b'\x10\x01'
@@ -103,7 +103,7 @@ class USBKeyboardInterface(USBInterface):
         return hid_descriptor
 
     @mutable('hid_report_descriptor')
-    def get_report_descriptor(self, **kwargs):
+    def get_report_descriptor(self, *args, **kwargs):
         usage_page_generic_desktop_controls = b'\x05\x01'
         # usage_page_generic_desktop_controls = b'\xb1\x01'
         usage_keyboard = b'\x09\x06'

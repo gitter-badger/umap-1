@@ -5,6 +5,7 @@
 from USB import *
 from USBClass import *
 import sys
+import traceback
 
 class USBDevice:
     name = "generic device"
@@ -246,8 +247,13 @@ class USBDevice:
         if self.state == USB.state_configured and ep_num in self.endpoints:
             endpoint = self.endpoints[ep_num]
             if callable(endpoint.handler):
-                endpoint.handler()
-    
+                try:
+                    endpoint.handler()
+                except:
+                    print(traceback.format_exc())
+                    print(''.join(traceback.format_stack()))
+                    raise
+
     # standard request handlers
     #####################################################
 
@@ -275,13 +281,13 @@ class USBDevice:
         if self.verbose > 2:
             print(self.name, "received CLEAR_FEATURE request with type 0x%02x and value 0x%02x" \
                 % (req.request_type, req.value))
-        
+
         #self.maxusb_app.send_on_endpoint(0, b'')
 
     # USB 2.0 specification, section 9.4.9 (p 286 of pdf)
     def handle_set_feature_request(self, req):
 
-        trace = "Dev:SetFea" 
+        trace = "Dev:SetFea"
         self.maxusb_app.fingerprint.append(trace)
 
 
@@ -401,7 +407,7 @@ class USBDevice:
     # USB 2.0 specification, section 9.4.8 (p 285 of pdf)
     def handle_set_descriptor_request(self, req):
 
-        trace = "Dev:SetDes" 
+        trace = "Dev:SetDes"
         self.maxusb_app.fingerprint.append(trace)
 
         if self.verbose > 0:
@@ -410,7 +416,7 @@ class USBDevice:
     # USB 2.0 specification, section 9.4.2 (p 281 of pdf)
     def handle_get_configuration_request(self, req):
 
-        trace = "Dev:GetCon" 
+        trace = "Dev:GetCon"
         self.maxusb_app.fingerprint.append(trace)
 
 

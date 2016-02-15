@@ -28,6 +28,8 @@ from devices.USBAudio import USBAudioDevice
 from devices.USBCDC import USBCDCDevice
 from devices.USBFtdi import USBFtdiDevice
 from devices.USBHub import USBHubDevice
+from devices.USBImage import USBImageDevice
+
 
 list_cmd = 'umap_stack.py list classes'
 
@@ -75,6 +77,16 @@ class_map = {
             'vid': 0x05e3,
             'pid': 0x0608,
             'rev': 0x7764,
+        }
+    },
+    'image': {
+        'fd_class': USBImageDevice,
+        'classes': [6],
+        'params': {
+            'vid': 0x04da,
+            'pid': 0x2374,
+            'rev': 0x0010,
+            'usbclass': 6,
         }
     },
 }
