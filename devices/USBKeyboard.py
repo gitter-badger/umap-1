@@ -163,15 +163,11 @@ class USBKeyboardInterface(USBInterface):
         return report_descriptor
 
     def handle_buffer_available(self):
-        if not self.keys:
-            if self.maxusb_app.mode == 1:
-                print(' **SUPPORTED**')
-                if self.maxusb_app.fplog:
-                    self.maxusb_app.fplog.write(" **SUPPORTED**\n")
-                self.maxusb_app.stop = True
-            return
-        letter = self.keys.pop(0)
-        self.type_letter(letter)
+        if self.keys:
+            letter = self.keys.pop(0)
+            self.type_letter(letter)
+        else:
+            self.supported()
 
     def type_letter(self, letter, modifiers=0):
         data = bytes([0, 0, ord(letter)])

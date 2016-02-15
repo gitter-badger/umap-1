@@ -47,7 +47,7 @@ class USBHubInterface(USBInterface):
 
         endpoint = USBEndpoint(
                 maxusb_app=maxusb_app,
-                number=0x81,
+                number=0x2,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_interrupt,
                 sync_type=USBEndpoint.sync_type_none,
