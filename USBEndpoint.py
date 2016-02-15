@@ -2,25 +2,27 @@
 #
 # Contains class definition for USBEndpoint.
 
+
 class USBEndpoint:
-    direction_out               = 0x00
-    direction_in                = 0x01
+    direction_out = 0x00
+    direction_in = 0x01
 
-    transfer_type_control       = 0x00
-    transfer_type_isochronous   = 0x01
-    transfer_type_bulk          = 0x02
-    transfer_type_interrupt     = 0x03
+    transfer_type_control = 0x00
+    transfer_type_isochronous = 0x01
+    transfer_type_bulk = 0x02
+    transfer_type_interrupt = 0x03
 
-    sync_type_none              = 0x00
-    sync_type_async             = 0x01
-    sync_type_adaptive          = 0x02
-    sync_type_synchronous       = 0x03
+    sync_type_none = 0x00
+    sync_type_async = 0x01
+    sync_type_adaptive = 0x02
+    sync_type_synchronous = 0x03
 
-    usage_type_data             = 0x00
-    usage_type_feedback         = 0x01
+    usage_type_data = 0x00
+    usage_type_feedback = 0x01
     usage_type_implicit_feedback = 0x02
 
-    def __init__(self, maxusb_app, number, direction, transfer_type, sync_type,
+    def __init__(
+            self, maxusb_app, number, direction, transfer_type, sync_type,
             usage_type, max_packet_size, interval, handler):
         '''
         :type maxusb_app: :class:`~MAXUSBApp.MAXUSBApp`
@@ -36,20 +38,21 @@ class USBEndpoint:
             func(data) -> None if direction is out,
             func() -> None if direction is IN
         :param handler: interrupt handler for the endpoint
+
+        .. note:: OUT endpoint is 1, IN endpoint is either 2 or 3
         '''
+        self.maxusb_app = maxusb_app
+        self.number = number
+        self.direction = direction
+        self.transfer_type = transfer_type
+        self.sync_type = sync_type
+        self.usage_type = usage_type
+        self.max_packet_size = max_packet_size
+        self.interval = interval
+        self.handler = handler
+        self.interface = None
 
-        self.maxusb_app         = maxusb_app
-        self.number             = number
-        self.direction          = direction
-        self.transfer_type      = transfer_type
-        self.sync_type          = sync_type
-        self.usage_type         = usage_type
-        self.max_packet_size    = max_packet_size
-        self.interval           = interval
-        self.handler            = handler
-        self.interface          = None
-
-        self.request_handlers   = {
+        self.request_handlers = {
             1: self.handle_clear_feature_request
         }
 
