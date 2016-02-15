@@ -30,20 +30,12 @@ from devices.USBFtdi import USBFtdiDevice
 from devices.USBHub import USBHubDevice
 from devices.USBImage import USBImageDevice
 from devices.USBMassStorage import USBMassStorageDevice
+from devices.USBPrinter import USBPrinterDevice
 
 
 list_cmd = 'umap_stack.py list classes'
 
 class_map = {
-    'keyboard': {
-        'fd_class': USBKeyboardDevice,
-        'classes': [3],
-        'params': {
-            'vid': 0x413c,
-            'pid': 0x2107,
-            'rev': 0x0178,
-        },
-    },
     'audio': {
         'fd_class': USBAudioDevice,
         'classes': [1],
@@ -111,6 +103,18 @@ class_map = {
             'proto': 0x50,  # bulk-only (BBB) transport
         }
     },
+    'printer': {
+        'fd_class': USBPrinterDevice,
+        'classes': [7],
+        'params': {
+            'vid': 0x03f0,
+            'pid': 0x4417,
+            'rev': 0x0100,
+            'usbclass': 7,
+            'subclass': 1,
+            'proto': 2,
+        }
+    }
 }
 
 default_params = {

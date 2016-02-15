@@ -235,7 +235,11 @@ class USBDevice:
                 print(self.name, "invalid handler, stalling")
                 self.maxusb_app.stall_ep0()
 
-        handler(req)
+        try:
+            handler(req)
+        except:
+            traceback.print_exc()
+            raise
 
     def handle_data_available(self, ep_num, data):
         if self.state == USB.state_configured and ep_num in self.endpoints:
