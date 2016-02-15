@@ -20,14 +20,17 @@ class USBKeyboardClass(USBClass):
             0x0a: self.handle_set_idle
         }
 
+    @mutable('hid_set_idle')
     def handle_set_idle(self, req):
         response = b''
         self.app.send_on_endpoint(0, response)
 
+    @mutable('hid_get_report')
     def handle_get_report(self, req):
         response = b''
         self.app.send_on_endpoint(0, response)
 
+    @mutable('hid_set_report')
     def handle_set_report(self, req):
         response = b''
         self.app.send_on_endpoint(0, response)
