@@ -1,7 +1,12 @@
 # USBImage.py
 #
 # Contains class definitions to implement a USB image device.
+'''
+.. todo::
 
+    Still doesn't really work, not sure why.
+    Should look deeper into the implementation and spec.
+'''
 from mmap import mmap
 from struct import pack, unpack
 from enum import IntEnum

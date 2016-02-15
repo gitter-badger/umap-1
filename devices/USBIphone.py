@@ -11,67 +11,50 @@ from USBEndpoint import *
 from USBCSEndpoint import *
 from USBVendor import *
 
+
 class USBIphoneVendor(USBVendor):
     name = "USB iPhone vendor"
 
     def setup_request_handlers(self):
         self.request_handlers = {
-             0x40 : self.handle_40_request,
-             0x45 : self.handle_45_request
-
+             0x40: self.handle_40_request,
+             0x45: self.handle_45_request
         }
 
     def handle_40_request(self, req):
         if self.verbose > 0:
             print(self.name, "received reset request")
-
         self.device.maxusb_app.send_on_endpoint(0, b'')
 
     def handle_45_request(self, req):
         if self.verbose > 0:
             print(self.name, "received reset request")
-
         self.device.maxusb_app.send_on_endpoint(0, b'\x03')
-
-
 
 
 class USBIphoneClass(USBClass):
     name = "USB iPhone class"
 
-    def __init__(self, maxusb_app):
-
-        self.maxusb_app = maxusb_app
-        self.setup_request_handlers()
-
     def setup_request_handlers(self):
         self.request_handlers = {
-            0x22 : self.handle_set_control_line_state,
-            0x20 : self.handle_set_line_coding
+            0x22: self.handle_set_control_line_state,
+            0x20: self.handle_set_line_coding
         }
 
     def handle_set_control_line_state(self, req):
         self.maxusb_app.send_on_endpoint(0, b'')
-        if self.maxusb_app.mode == 1:
-            print (" **SUPPORTED**",end="")
-            if self.maxusb_app.fplog:
-                self.maxusb_app.fplog.write (" **SUPPORTED**\n")
-            self.maxusb_app.stop = True
+        self.supported()
 
     def handle_set_line_coding(self, req):
         self.maxusb_app.send_on_endpoint(0, b'')
-
+        self.supported()
 
 
 class USBIphoneInterface(USBInterface):
     name = "USB iPhone interface"
 
     def __init__(self, int_num, maxusb_app, usbclass, sub, proto, verbose=0):
-
-        self.maxusb_app = maxusb_app
-        self.int_num = int_num
-
-        descriptors = { }
+        descriptors = {}
 
         endpoints0 = [
             USBEndpoint(
@@ -109,8 +92,6 @@ class USBIphoneInterface(USBInterface):
             )
 
         ]
-
-
         endpoints1 = [
             USBEndpoint(
                 maxusb_app,
@@ -135,28 +116,20 @@ class USBIphoneInterface(USBInterface):
                 self.handle_data_available    # handler function
             )
         ]
-
-
         endpoints2 = []
 
-
-        if self.int_num == 0:
-                endpoints = endpoints0
-
-        elif self.int_num == 1:
-                endpoints = endpoints1
-
-        elif self.int_num == 2:
-                endpoints = endpoints2
-
-
-
+        if int_num == 0:
+            endpoints = endpoints0
+        elif int_num == 1:
+            endpoints = endpoints1
+        elif int_num == 2:
+            endpoints = endpoints2
 
         # TODO: un-hardcode string index (last arg before "verbose")
         USBInterface.__init__(
                 self,
                 maxusb_app,
-                self.int_num,          # interface number
+                int_num,          # interface number
                 0,          # alternate setting
                 usbclass,          # 3 interface class
                 sub,          # 0 subclass
@@ -170,19 +143,15 @@ class USBIphoneInterface(USBInterface):
         self.device_class = USBIphoneClass(maxusb_app)
         self.device_class.set_interface(self)
 
-
     def handle_data_available(self, data):
         if self.verbose > 0:
             print(self.name, "handling", len(data), "bytes of audio data")
-    
-
 
 
 class USBIphoneDevice(USBDevice):
     name = "USB iPhone device"
 
     def __init__(self, maxusb_app, vid, pid, rev, verbose=0):
-
         int_class = 0
         int_subclass = 0
         int_proto = 0
