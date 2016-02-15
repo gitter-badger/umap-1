@@ -49,17 +49,15 @@ class USBInterface:
     # USB 2.0 specification, section 9.4.3 (p 281 of pdf)
     # HACK: blatant copypasta from USBDevice pains me deeply
     def handle_get_descriptor_request(self, req):
-        dtype  = (req.value >> 8) & 0xff
+        dtype = (req.value >> 8) & 0xff
         dindex = req.value & 0xff
-        lang   = req.index
-        n      = req.length
+        lang = req.index
+        n = req.length
 
         response = None
 
-
         trace = "Int:GetDes:%d:%d" % (dtype,dindex)
         self.maxusb_app.fingerprint.append(trace)
-
 
         if self.verbose > 2:
             print(self.name, ("received GET_DESCRIPTOR req %d, index %d, " \
@@ -79,10 +77,8 @@ class USBInterface:
                 print(self.name, "sent", n, "bytes in response")
 
     def handle_set_interface_request(self, req):
-
         trace = "Int:SetInt" 
         self.maxusb_app.fingerprint.append(trace)
-
 
         if self.verbose > 0:
             print(self.name, "received SET_INTERFACE request")
@@ -125,3 +121,13 @@ class USBInterface:
 
         return d
 
+    def supported(self):
+        '''
+        Mark current USB class as supported by the host.
+        This will tell the application to stop emulating current device.
+        '''
+        if self.maxusb_app.mode == 1:
+            print (' **SUPPORTED**')
+            if self.maxusb_app.fplog:
+                self.maxusb_app.fplog.write(" **SUPPORTED**\n")
+            self.maxusb_app.stop = True

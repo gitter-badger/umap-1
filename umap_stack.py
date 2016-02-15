@@ -29,6 +29,7 @@ from devices.USBCDC import USBCDCDevice
 from devices.USBFtdi import USBFtdiDevice
 from devices.USBHub import USBHubDevice
 from devices.USBImage import USBImageDevice
+from devices.USBMassStorage import USBMassStorageDevice
 
 
 list_cmd = 'umap_stack.py list classes'
@@ -87,6 +88,27 @@ class_map = {
             'pid': 0x2374,
             'rev': 0x0010,
             'usbclass': 6,
+        }
+    },
+    'keyboard': {
+        'fd_class': USBKeyboardDevice,
+        'classes': [3],
+        'params': {
+            'vid': 0x413c,
+            'pid': 0x2107,
+            'rev': 0x0178,
+        },
+    },
+    'mass-storage': {
+        'fd_class': USBMassStorageDevice,
+        'classes': [8],
+        'params': {
+            'vid': 0x154b,
+            'pid': 0x6545,
+            'rev': 0x0200,
+            'usbclass': 8,
+            'subclass': 6,  # SCSI transparent command set
+            'proto': 0x50,  # bulk-only (BBB) transport
         }
     },
 }
