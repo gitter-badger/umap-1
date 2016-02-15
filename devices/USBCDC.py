@@ -85,39 +85,39 @@ class USBCDCInterface(USBInterface):
         endpoints0 = [
             USBEndpoint(
                 maxusb_app=maxusb_app,
-                number=0x83,
+                number=0x3,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_interrupt,
                 sync_type=USBEndpoint.sync_type_none,
                 usage_type=USBEndpoint.usage_type_data,
                 max_packet_size=0x2000,
                 interval=0xff,
-                handler=None
+                handler=self.handle_buffer_available
             )
         ]
 
         endpoints1 = [
             USBEndpoint(
                 maxusb_app=maxusb_app,
-                number=0x81,
-                direction=USBEndpoint.direction_in,
-                transfer_type=USBEndpoint.transfer_type_bulk,
-                sync_type=USBEndpoint.sync_type_none,
-                usage_type=USBEndpoint.usage_type_data,
-                max_packet_size=0x2000,
-                interval=0x00,
-                handler=None
-            ),
-            USBEndpoint(
-                maxusb_app=maxusb_app,
-                number=0x02,
+                number=0x1,
                 direction=USBEndpoint.direction_out,
                 transfer_type=USBEndpoint.transfer_type_bulk,
                 sync_type=USBEndpoint.sync_type_none,
                 usage_type=USBEndpoint.usage_type_data,
                 max_packet_size=0x2000,
                 interval=0x00,
-                handler=self.handle_data_available
+                handler=self.handle_ep1_data_available
+            ),
+            USBEndpoint(
+                maxusb_app=maxusb_app,
+                number=0x2,
+                direction=USBEndpoint.direction_in,
+                transfer_type=USBEndpoint.transfer_type_bulk,
+                sync_type=USBEndpoint.sync_type_none,
+                usage_type=USBEndpoint.usage_type_data,
+                max_packet_size=0x2000,
+                interval=0x00,
+                handler=self.handle_buffer_available
             )
         ]
 
@@ -147,10 +147,14 @@ class USBCDCInterface(USBInterface):
         self.device_class = USBCDCClass(maxusb_app)
         self.device_class.set_interface(self)
 
-    @mutable('cdc_handle_data_available')
-    def handle_data_available(self, data):
+    @mutable('cdc_handle_ep1_data_available')
+    def handle_ep1_data_available(self, data):
         if self.verbose > 0:
             print(self.name, "handling", len(data), "bytes of audio data")
+
+    def handle_buffer_available(self):
+        if self.verbose > 0:
+            print(self.name, 'buffer available')
 
 
 class USBCDCDevice(USBDevice):

@@ -185,14 +185,14 @@ class USBAudioInterface(USBInterface):
         endpoints0 = [
             USBEndpoint(
                 maxusb_app=maxusb_app,
-                number=1,
+                number=2,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_interrupt,
                 sync_type=USBEndpoint.sync_type_none,
                 usage_type=USBEndpoint.usage_type_data,
                 max_packet_size=0x0400,
                 interval=0x02,
-                handler=self.handle_data_available
+                handler=self.audio_ep2_buffer_available
             )
         ]
 
@@ -231,10 +231,10 @@ class USBAudioInterface(USBInterface):
         self.device_class = USBAudioClass(maxusb_app)
         self.device_class.set_interface(self)
 
-    @mutable('audio_data_available')
-    def handle_data_available(self, data):
+    @mutable('audio_ep2_buffer_available')
+    def audio_ep2_buffer_available(self):
         if self.verbose > 0:
-            print(self.name, "handling", len(data), "bytes of audio data")
+            print(self.name, "handling buffer available on ep2")
 
     @mutable('audio_hid_descriptor')
     def get_hid_descriptor(self, *args, **kwargs):
