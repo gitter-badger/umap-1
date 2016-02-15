@@ -14,26 +14,31 @@ class USBKeyboardClass(USBClass):
     name = "USB Keyboard class"
 
     def setup_request_handlers(self):
+        self.local_handlers = {
+            0x01: ('hid_set_idle', self.handle_get_report),
+            0x09: ('hid_get_report', self.handle_set_report),
+            0x0a: ('hid_set_report', self.handle_set_idle)
+        }
         self.request_handlers = {
-            0x01: self.handle_get_report,
-            0x09: self.handle_set_report,
-            0x0a: self.handle_set_idle
+            x: self.handle_all for x in self.local_handlers
         }
 
-    @mutable('hid_set_idle')
+    def handle_all(self, req):
+        stage, handler = self.local_handlers[req.request]
+        response = self.get_mutation(stage=stage)
+        if response is None:
+            response = handler(req)
+        self.app.send_on_endpoint(0, response)
+        self.supported()
+
     def handle_set_idle(self, req):
-        response = b''
-        self.app.send_on_endpoint(0, response)
+        return b''
 
-    @mutable('hid_get_report')
     def handle_get_report(self, req):
-        response = b''
-        self.app.send_on_endpoint(0, response)
+        return b''
 
-    @mutable('hid_set_report')
     def handle_set_report(self, req):
-        response = b''
-        self.app.send_on_endpoint(0, response)
+        return b''
 
 
 class USBKeyboardInterface(USBInterface):
