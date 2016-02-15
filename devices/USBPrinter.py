@@ -1,9 +1,6 @@
-# USBPrinter.py 
+# USBPrinter.py
 #
 # Contains class definitions to implement a USB printer device.
-
-from mmap import mmap
-import os
 import time
 from struct import pack
 
