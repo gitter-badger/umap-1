@@ -144,8 +144,6 @@ class USBSmartcardInterface(USBInterface):
         self.clock_freq = self.clock_frequencies[0]
         self.data_rate = 0 if not self.data_rates else self.data_rates[0]
 
-        self.cloc
-
         endpoints = [
             # CCID command pipe
             USBEndpoint(
@@ -208,20 +206,20 @@ class USBSmartcardInterface(USBInterface):
         self.clock_status = 0x00
 
         self.operations = {
-            PcToRdr.IccPowerOn: self.handle_PcToRdr_IccPowerOn,
-            PcToRdr.IccPowerOff: self.handle_PcToRdr_IccPowerOff,
-            PcToRdr.GetSlotStatus: self.handle_PcToRdr_GetSlotStatus,
-            PcToRdr.XfrBlock: self.handle_PcToRdr_XfrBlock,
-            PcToRdr.GetParameters: self.handle_PcToRdr_GetParameters,
-            PcToRdr.ResetParameters: self.handle_PcToRdr_ResetParameters,
-            PcToRdr.SetParameters: self.handle_PcToRdr_SetParameters,
-            PcToRdr.Escape: self.handle_PcToRdr_Escape,
-            PcToRdr.IccClock: self.handle_PcToRdr_IccClock,
-            PcToRdr.T0APDU: self.handle_PcToRdr_T0APDU,
-            PcToRdr.Secure: self.handle_PcToRdr_Secure,
-            PcToRdr.Mechanical: self.handle_PcToRdr_Mechanical,
-            PcToRdr.Abort: self.handle_PcToRdr_Abort,
-            PcToRdr.SetDataRateAndClock_Frequency: self.handle_PcToRdr_SetDataRateAndClock_Frequency,
+            PcToRdrOpcode.IccPowerOn: self.handle_PcToRdr_IccPowerOn,
+            PcToRdrOpcode.IccPowerOff: self.handle_PcToRdr_IccPowerOff,
+            PcToRdrOpcode.GetSlotStatus: self.handle_PcToRdr_GetSlotStatus,
+            PcToRdrOpcode.XfrBlock: self.handle_PcToRdr_XfrBlock,
+            PcToRdrOpcode.GetParameters: self.handle_PcToRdr_GetParameters,
+            PcToRdrOpcode.ResetParameters: self.handle_PcToRdr_ResetParameters,
+            PcToRdrOpcode.SetParameters: self.handle_PcToRdr_SetParameters,
+            PcToRdrOpcode.Escape: self.handle_PcToRdr_Escape,
+            PcToRdrOpcode.IccClock: self.handle_PcToRdr_IccClock,
+            PcToRdrOpcode.T0APDU: self.handle_PcToRdr_T0APDU,
+            PcToRdrOpcode.Secure: self.handle_PcToRdr_Secure,
+            PcToRdrOpcode.Mechanical: self.handle_PcToRdr_Mechanical,
+            PcToRdrOpcode.Abort: self.handle_PcToRdr_Abort,
+            PcToRdrOpcode.SetDataRateAndClock_Frequency: self.handle_PcToRdr_SetDataRateAndClock_Frequency,
         }
 
     @mutable('IccPowerOn_response')
@@ -461,6 +459,7 @@ class USBSmartcardInterface(USBInterface):
         )
 
         response = pack('B', len(response)) + response
+        return response
 
     def handle_data_available(self, data):
         self.supported()
