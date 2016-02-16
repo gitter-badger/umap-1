@@ -80,7 +80,7 @@ class USBEndpoint:
         wMaxPacketSize = self.max_packet_size
 
         d = pack(
-            '<BBBBIB',
+            '<BBBBHB',
             bLength,
             bDescriptorType,
             bEndpointAddress,
