@@ -40,13 +40,13 @@ class USBHubClass(USBClass):
 class USBHubInterface(USBInterface):
     name = "USB hub interface"
 
-    def __init__(self, maxusb_app, verbose=0):
+    def __init__(self, app, verbose=0):
         descriptors = {
                 USB.desc_type_hub: self.get_hub_descriptor
         }
 
         endpoint = USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=0x2,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_interrupt,
@@ -59,7 +59,7 @@ class USBHubInterface(USBInterface):
 
         # TODO: un-hardcode string index (last arg before "verbose")
         super(USBHubInterface, self).__init__(
-            maxusb_app=maxusb_app,
+            app=app,
             interface_number=0,          # interface number
             interface_alternate=0,          # alternate setting
             interface_class=9,          # 3 interface class
@@ -71,7 +71,7 @@ class USBHubInterface(USBInterface):
             descriptors=descriptors
         )
 
-        self.device_class = USBHubClass(maxusb_app)
+        self.device_class = USBHubClass(app)
         self.device_class.set_interface(self)
 
     @mutable('hub_descriptor')
@@ -105,18 +105,18 @@ class USBHubInterface(USBInterface):
 class USBHubDevice(USBDevice):
     name = "USB hub device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, verbose=0, **kwargs):
-        interface = USBHubInterface(maxusb_app, verbose=verbose)
+    def __init__(self, app, vid, pid, rev, verbose=0, **kwargs):
+        interface = USBHubInterface(app, verbose=verbose)
 
         config = USBConfiguration(
-            maxusb_app=maxusb_app,
+            app=app,
             configuration_index=1,
             configuration_string="Emulated Hub",
             interfaces=[interface]
         )
 
         super(USBHubDevice, self).__init__(
-            maxusb_app=maxusb_app,
+            app=app,
             device_class=9,
             device_subclass=0,
             protocol_rel_num=1,

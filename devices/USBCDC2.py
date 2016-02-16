@@ -14,9 +14,9 @@ from USBCSEndpoint import *
 class USBCDCClass(USBClass):
     name = "USB CDC class"
 
-    def __init__(self, maxusb_app):
+    def __init__(self, app):
 
-        self.maxusb_app = maxusb_app
+        self.app = app
         self.setup_request_handlers()
 
     def setup_request_handlers(self):
@@ -28,36 +28,28 @@ class USBCDCClass(USBClass):
         }
 
     def handle_set_control_line_state(self, req):
-        self.maxusb_app.send_on_endpoint(0, b'')
-        if self.maxusb_app.mode == 1:
+        self.app.send_on_endpoint(0, b'')
+        if self.app.mode == 1:
             print (" **SUPPORTED**",end="")
-            if self.maxusb_app.fplog:
-                self.maxusb_app.fplog.write (" **SUPPORTED**\n")
-            self.maxusb_app.stop = True
+            if self.app.fplog:
+                self.app.fplog.write (" **SUPPORTED**\n")
+            self.app.stop = True
 
     def handle_set_line_coding(self, req):
-        self.maxusb_app.send_on_endpoint(0, b'')
+        self.app.send_on_endpoint(0, b'')
 
     def handle_send_encapsulated_command(self, req):
-        self.maxusb_app.send_on_endpoint(0, b'')
+        self.app.send_on_endpoint(0, b'')
 
     def handle_get_encapsulated_response(self, req):
-        self.maxusb_app.send_on_endpoint(0, b'')
-
-
-
+        self.app.send_on_endpoint(0, b'')
 
 
 class USBCDCInterface(USBInterface):
     name = "USB CDC interface"
 
-    def __init__(self, int_num, maxusb_app, usbclass, sub, proto, verbose=0):
-
-
-        self.maxusb_app = maxusb_app
-        self.int_num = int_num
-
-        descriptors = { }
+    def __init__(self, int_num, app, usbclass, sub, proto, verbose=0):
+        descriptors = {}
 
         cs_config1 = [
             0x00,           # Header Functional Descriptor
@@ -91,28 +83,28 @@ class USBCDCInterface(USBInterface):
 
         cs_interfaces0 = [
             USBCSInterface (
-                maxusb_app,
+                app,
                 cs_config1,
                 2,
                 2,
                 0xff
             ),
             USBCSInterface (
-                maxusb_app,
+                app,
                 cs_config2,
                 2,
                 2,
                 0xff
             ),
             USBCSInterface (
-                maxusb_app,
+                app,
                 cs_config3,
                 2,
                 2,
                 0xff
             ),
             USBCSInterface (
-                maxusb_app,
+                app,
                 cs_config4,
                 2,
                 2,
@@ -164,21 +156,21 @@ class USBCDCInterface(USBInterface):
 
         cs_interfaces2 = [
             USBCSInterface (
-                maxusb_app,
+                app,
                 cs_config5,
                 2,
                 6,
                 0
             ),
             USBCSInterface (
-                maxusb_app,
+                app,
                 cs_config6,
                 2,
                 6,
                 0
             ),
             USBCSInterface (
-                maxusb_app,
+                app,
                 cs_config7,
                 2,
                 6,
@@ -189,14 +181,9 @@ class USBCDCInterface(USBInterface):
 
         cs_interfaces3 = []
 
-
-
-
-
-
         endpoints0 = [
             USBEndpoint(
-                maxusb_app,
+                app,
                 3,           # endpoint address
                 USBEndpoint.direction_in,
                 USBEndpoint.transfer_type_interrupt,
@@ -211,7 +198,7 @@ class USBCDCInterface(USBInterface):
 
         endpoints1 = [
             USBEndpoint(
-                maxusb_app,
+                app,
                 3,           # endpoint address
                 USBEndpoint.direction_in,
                 USBEndpoint.transfer_type_bulk,
@@ -222,7 +209,7 @@ class USBCDCInterface(USBInterface):
                 self.handle_data_available    # handler function
             ),
             USBEndpoint(
-                maxusb_app,
+                app,
                 1,           # endpoint address
                 USBEndpoint.direction_out,
                 USBEndpoint.transfer_type_bulk,
@@ -237,7 +224,7 @@ class USBCDCInterface(USBInterface):
 
         endpoints2 = [
             USBEndpoint(
-                maxusb_app,
+                app,
                 3,           # 2 endpoint address
                 USBEndpoint.direction_in,
                 USBEndpoint.transfer_type_interrupt,
@@ -252,7 +239,7 @@ class USBCDCInterface(USBInterface):
 
         endpoints3 = [
             USBEndpoint(
-                maxusb_app,
+                app,
                 3,           # 1 endpoint address
                 USBEndpoint.direction_in,
                 USBEndpoint.transfer_type_bulk,
@@ -263,7 +250,7 @@ class USBCDCInterface(USBInterface):
                 self.handle_data_available    # handler function
             ),
             USBEndpoint(
-                maxusb_app,
+                app,
                 1,           # endpoint address
                 USBEndpoint.direction_out,
                 USBEndpoint.transfer_type_bulk,
@@ -275,52 +262,39 @@ class USBCDCInterface(USBInterface):
             )
         ]
 
+        if int_num == 0:
+            endpoints = endpoints0
+            cs_interfaces = cs_interfaces0
+        elif int_num == 1:
+            endpoints = endpoints1
+            cs_interfaces = cs_interfaces1
+        elif int_num == 2:
+            endpoints = endpoints2
+            cs_interfaces = cs_interfaces2
+        elif int_num == 3:
+            endpoints = endpoints3
+            cs_interfaces = cs_interfaces3
 
+        if int_num == 2:   # Ugly hack
+            int_num = 0
+        if int_num == 3:
+            int_num = 1
 
-
-        if self.int_num == 0:
-                endpoints = endpoints0
-                cs_interfaces = cs_interfaces0
-
-        elif self.int_num == 1:
-                endpoints = endpoints1
-                cs_interfaces = cs_interfaces1
-
-        elif self.int_num == 2:
-                endpoints = endpoints2
-                cs_interfaces = cs_interfaces2
-
-        elif self.int_num == 3:
-                endpoints = endpoints3
-                cs_interfaces = cs_interfaces3
-
-
-        if self.int_num == 2:   #Ugly hack
-            self.int_num = 0
-
-        if self.int_num == 3:
-            self.int_num = 1
-
-
-
-
-        # TODO: un-hardcode string index (last arg before "verbose")
-        USBInterface.__init__(
-                self,
-                maxusb_app,
-                self.int_num,          # interface number
-                0,          # alternate setting
-                usbclass,          # 3 interface class
-                sub,          # 0 subclass
-                proto,          # 0 protocol
-                0,          # string index
-                verbose,
-                endpoints,
-                descriptors,
-                cs_interfaces
+        super(USBCDCInterface, self).__init__(
+                app=app,
+                interface_number=int_num,
+                interface_alternate=0,
+                interface_class=usbclass,
+                interface_subclass=sub,
+                interface_protocol=proto,
+                interface_string_index=0,
+                verbose=verbose,
+                endpoints=endpoints,
+                descriptors=descriptors,
+                cs_interfaces=cs_interfaces
         )
 
-        self.device_class = USBCDCClass(maxusb_app)
+        self.device_class = USBCDCClass(app)
         self.device_class.set_interface(self)
 
 
@@ -333,12 +307,12 @@ class USBCDCInterface(USBInterface):
 class USBCDCDevice(USBDevice):
     name = "USB CDC device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, verbose=0):
+    def __init__(self, app, vid, pid, rev, verbose=0):
 
-        interface0 = USBCDCInterface(0, maxusb_app, 0x02, 0x02, 0xff,verbose=verbose)
-        interface1 = USBCDCInterface(1, maxusb_app, 0x0a, 0x00, 0x00,verbose=verbose)
-        interface2 = USBCDCInterface(2, maxusb_app, 0x02, 0x06, 0x00,verbose=verbose)
-        interface3 = USBCDCInterface(3, maxusb_app, 0x0a, 0x00, 0x00,verbose=verbose)
+        interface0 = USBCDCInterface(0, app, 0x02, 0x02, 0xff,verbose=verbose)
+        interface1 = USBCDCInterface(1, app, 0x0a, 0x00, 0x00,verbose=verbose)
+        interface2 = USBCDCInterface(2, app, 0x02, 0x06, 0x00,verbose=verbose)
+        interface3 = USBCDCInterface(3, app, 0x0a, 0x00, 0x00,verbose=verbose)
 
         if vid == 0x1111:
             vid = 0x1390
@@ -350,13 +324,13 @@ class USBCDCDevice(USBDevice):
 
         config = [
             USBConfiguration(
-                maxusb_app,
+                app,
                 2,                          # index
                 "CDC Ethernet Control Module (ECM)",             # string desc
                 [ interface0, interface1 ]  # interfaces
             ),
             USBConfiguration(
-                maxusb_app,
+                app,
                 1,                          # index
                 "Emulated CDC - ACM",             # string desc
                 [ interface2, interface3 ]  # interfaces
@@ -367,7 +341,7 @@ class USBCDCDevice(USBDevice):
 
         USBDevice.__init__(
                 self,
-                maxusb_app,
+                app,
                 2,                      # 0 device class
 		        0,                      # device subclass
                 0,                      # protocol release number

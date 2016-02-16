@@ -4,12 +4,12 @@
 
 from USB import *
 
+
 class USBCSInterface:
     name = "USB class-specific interface"
 
-    def __init__(self, maxusb_app, cs_config, usbclass, sub, proto, verbose=0, descriptors={}):
-
-        self.maxusb_app = maxusb_app
+    def __init__(self, app, cs_config, usbclass, sub, proto, verbose=0, descriptors={}):
+        self.app = app
         self.usbclass = usbclass
         self.sub = sub
         self.proto = proto
@@ -20,20 +20,20 @@ class USBCSInterface:
         self.descriptors[USB.desc_type_cs_interface] = self.get_descriptor
 
         self.request_handlers = {
-             6 : self.handle_get_descriptor_request,
-            11 : self.handle_set_interface_request
+            0x06: self.handle_get_descriptor_request,
+            0x0b: self.handle_set_interface_request
         }
 
     def get_mutation(self, stage, data=None):
-        return self.maxusb_app.get_mutation(stage, data)
+        return self.app.get_mutation(stage, data)
 
     # USB 2.0 specification, section 9.4.3 (p 281 of pdf)
     # HACK: blatant copypasta from USBDevice pains me deeply
     def handle_get_descriptor_request(self, req):
-        dtype  = (req.value >> 8) & 0xff
+        dtype = (req.value >> 8) & 0xff
         dindex = req.value & 0xff
-        lang   = req.index
-        n      = req.length
+        lang = req.index
+        n = req.length
 
         response = None
 
@@ -49,7 +49,7 @@ class USBCSInterface:
 
         if response:
             n = min(n, len(response))
-            self.configuration.device.maxusb_app.send_on_endpoint(0, response[:n])
+            self.configuration.device.app.send_on_endpoint(0, response[:n])
 
             if self.verbose > 5:
                 print(self.name, "sent", n, "bytes in response")
@@ -58,7 +58,7 @@ class USBCSInterface:
         if self.verbose > 0:
             print(self.name, "received SET_INTERFACE request")
 
-        self.configuration.device.maxusb_app.stall_ep0()
+        self.configuration.device.app.stall_ep0()
 
 
     # Table 9-12 of USB 2.0 spec (pdf page 296)

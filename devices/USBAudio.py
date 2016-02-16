@@ -41,11 +41,7 @@ class USBAudioClass(USBClass):
 class USBAudioInterface(USBInterface):
     name = "USB audio interface"
 
-    def __init__(self, int_num, maxusb_app, usbclass, sub, proto, verbose=0):
-
-        self.maxusb_app = maxusb_app
-        self.int_num = int_num
-
+    def __init__(self, int_num, app, usbclass, sub, proto, verbose=0):
         descriptors = {
             USB.desc_type_hid: self.get_hid_descriptor,
             USB.desc_type_report: self.get_report_descriptor
@@ -143,13 +139,13 @@ class USBAudioInterface(USBInterface):
         ]
 
         cs_interfaces0 = [
-            USBCSInterface(maxusb_app, cs_config1, 1, 1, 0),
-            USBCSInterface(maxusb_app, cs_config2, 1, 1, 0),
-            USBCSInterface(maxusb_app, cs_config3, 1, 1, 0),
-            USBCSInterface(maxusb_app, cs_config4, 1, 1, 0),
-            USBCSInterface(maxusb_app, cs_config5, 1, 1, 0),
-            USBCSInterface(maxusb_app, cs_config6, 1, 1, 0),
-            USBCSInterface(maxusb_app, cs_config7, 1, 1, 0)
+            USBCSInterface(app, cs_config1, 1, 1, 0),
+            USBCSInterface(app, cs_config2, 1, 1, 0),
+            USBCSInterface(app, cs_config3, 1, 1, 0),
+            USBCSInterface(app, cs_config4, 1, 1, 0),
+            USBCSInterface(app, cs_config5, 1, 1, 0),
+            USBCSInterface(app, cs_config6, 1, 1, 0),
+            USBCSInterface(app, cs_config7, 1, 1, 0)
         ]
 
         # cs_config8 = [
@@ -184,7 +180,7 @@ class USBAudioInterface(USBInterface):
 
         endpoints0 = [
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=2,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_interrupt,
@@ -196,18 +192,18 @@ class USBAudioInterface(USBInterface):
             )
         ]
 
-        if self.int_num == 3:
+        if int_num == 3:
             endpoints = endpoints0
         else:
             endpoints = []
 
-        if self.int_num == 0:
+        if int_num == 0:
             cs_interfaces = cs_interfaces0
-        if self.int_num == 1:
+        if int_num == 1:
             cs_interfaces = cs_interfaces1
-        if self.int_num == 2:
+        if int_num == 2:
             cs_interfaces = cs_interfaces2
-        if self.int_num == 3:
+        if int_num == 3:
             cs_interfaces = cs_interfaces3
 
         # if self.int_num == 1:
@@ -215,8 +211,8 @@ class USBAudioInterface(USBInterface):
 
         # TODO: un-hardcode string index (last arg before "verbose")
         super(USBAudioInterface, self).__init__(
-            maxusb_app=maxusb_app,
-            interface_number=self.int_num,          # interface number
+            app=app,
+            interface_number=int_num,          # interface number
             interface_alternate=0,          # alternate setting
             interface_class=usbclass,          # 3 interface class
             interface_subclass=sub,          # 0 subclass
@@ -228,7 +224,7 @@ class USBAudioInterface(USBInterface):
             cs_interfaces=cs_interfaces
         )
 
-        self.device_class = USBAudioClass(maxusb_app)
+        self.device_class = USBAudioClass(app)
         self.device_class.set_interface(self)
 
     @mutable('audio_ep2_buffer_available')
@@ -253,11 +249,11 @@ class USBAudioInterface(USBInterface):
 class USBAudioDevice(USBDevice):
     name = "USB audio device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, verbose=0, **kwargs):
-        interface0 = USBAudioInterface(0, maxusb_app, 0x01, 0x01, 0x00, verbose=verbose)
-        interface1 = USBAudioInterface(1, maxusb_app, 0x01, 0x02, 0x00, verbose=verbose)
-        interface2 = USBAudioInterface(2, maxusb_app, 0x01, 0x02, 0x00, verbose=verbose)
-        interface3 = USBAudioInterface(3, maxusb_app, 0x03, 0x00, 0x00, verbose=verbose)
+    def __init__(self, app, vid, pid, rev, verbose=0, **kwargs):
+        interface0 = USBAudioInterface(0, app, 0x01, 0x01, 0x00, verbose=verbose)
+        interface1 = USBAudioInterface(1, app, 0x01, 0x02, 0x00, verbose=verbose)
+        interface2 = USBAudioInterface(2, app, 0x01, 0x02, 0x00, verbose=verbose)
+        interface3 = USBAudioInterface(3, app, 0x03, 0x00, 0x00, verbose=verbose)
 
         if vid == 0x1111:
             vid = 0x041e
@@ -267,7 +263,7 @@ class USBAudioDevice(USBDevice):
             rev = 0x0100
 
         config = USBConfiguration(
-            maxusb_app=maxusb_app,
+            app=app,
             configuration_index=1,
             configuration_string="Emulated Audio",
             interfaces=[
@@ -279,7 +275,7 @@ class USBAudioDevice(USBDevice):
         )
 
         super(USBAudioDevice, self).__init__(
-            maxusb_app=maxusb_app,
+            app=app,
             device_class=0,
             device_subclass=0,
             protocol_rel_num=0,

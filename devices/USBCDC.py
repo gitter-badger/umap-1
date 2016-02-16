@@ -39,9 +39,7 @@ class USBCDCClass(USBClass):
 class USBCDCInterface(USBInterface):
     name = "USB CDC interface"
 
-    def __init__(self, int_num, maxusb_app, usbclass, sub, proto, verbose=0):
-        self.maxusb_app = maxusb_app
-        self.int_num = int_num
+    def __init__(self, int_num, app, usbclass, sub, proto, verbose=0):
         descriptors = {}
         cs_config1 = [
             0x00,  # Header Functional Descriptor
@@ -74,17 +72,17 @@ class USBCDCInterface(USBInterface):
         ]
 
         cs_interfaces0 = [
-            USBCSInterface(maxusb_app, cs_config1, 2, 2, 1),
-            USBCSInterface(maxusb_app, cs_config2, 2, 2, 1),
-            USBCSInterface(maxusb_app, cs_config3, 2, 2, 1),
-            USBCSInterface(maxusb_app, cs_config4, 2, 2, 1)
+            USBCSInterface(app, cs_config1, 2, 2, 1),
+            USBCSInterface(app, cs_config2, 2, 2, 1),
+            USBCSInterface(app, cs_config3, 2, 2, 1),
+            USBCSInterface(app, cs_config4, 2, 2, 1)
         ]
 
         cs_interfaces1 = []
 
         endpoints0 = [
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=0x3,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_interrupt,
@@ -98,7 +96,7 @@ class USBCDCInterface(USBInterface):
 
         endpoints1 = [
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=0x1,
                 direction=USBEndpoint.direction_out,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -109,7 +107,7 @@ class USBCDCInterface(USBInterface):
                 handler=self.handle_ep1_data_available
             ),
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=0x2,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -121,18 +119,18 @@ class USBCDCInterface(USBInterface):
             )
         ]
 
-        if self.int_num == 0:
+        if int_num == 0:
                 endpoints = endpoints0
                 cs_interfaces = cs_interfaces0
 
-        elif self.int_num == 1:
+        elif int_num == 1:
                 endpoints = endpoints1
                 cs_interfaces = cs_interfaces1
 
         # TODO: un-hardcode string index (last arg before "verbose")
         super(USBCDCInterface, self).__init__(
-                maxusb_app=maxusb_app,
-                interface_number=self.int_num,
+                app=app,
+                interface_number=int_num,
                 interface_alternate=0,
                 interface_class=usbclass,
                 interface_subclass=sub,
@@ -144,7 +142,7 @@ class USBCDCInterface(USBInterface):
                 cs_interfaces=cs_interfaces
         )
 
-        self.device_class = USBCDCClass(maxusb_app)
+        self.device_class = USBCDCClass(app)
         self.device_class.set_interface(self)
 
     @mutable('cdc_handle_ep1_data_available')
@@ -160,19 +158,19 @@ class USBCDCInterface(USBInterface):
 class USBCDCDevice(USBDevice):
     name = "USB CDC device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, verbose=0, **kwargs):
-        interface0 = USBCDCInterface(0, maxusb_app, 0x02, 0x02, 0x01, verbose=verbose)
-        interface1 = USBCDCInterface(1, maxusb_app, 0x0a, 0x00, 0x00, verbose=verbose)
+    def __init__(self, app, vid, pid, rev, verbose=0, **kwargs):
+        interface0 = USBCDCInterface(0, app, 0x02, 0x02, 0x01, verbose=verbose)
+        interface1 = USBCDCInterface(1, app, 0x0a, 0x00, 0x00, verbose=verbose)
 
         config = USBConfiguration(
-            maxusb_app=maxusb_app,
+            app=app,
             configuration_index=1,
             configuration_string="Emulated CDC",
             interfaces=[interface0, interface1]
         )
 
         super(USBCDCDevice, self).__init__(
-            maxusb_app=maxusb_app,
+            app=app,
             device_class=2,
             device_subclass=0,
             protocol_rel_num=0,

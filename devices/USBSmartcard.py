@@ -122,7 +122,7 @@ class RdrToPc(IntEnum):
 class USBSmartcardInterface(USBInterface):
     name = "USB Smartcard interface"
 
-    def __init__(self, maxusb_app, verbose=0):
+    def __init__(self, app, verbose=0):
         descriptors = {
             USB.desc_type_hid: self.get_icc_descriptor
         }
@@ -149,7 +149,7 @@ class USBSmartcardInterface(USBInterface):
         endpoints = [
             # CCID command pipe
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=1,
                 direction=USBEndpoint.direction_out,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -161,7 +161,7 @@ class USBSmartcardInterface(USBInterface):
             ),
             # CCID response pipe
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=2,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -173,7 +173,7 @@ class USBSmartcardInterface(USBInterface):
             ),
             # CCID event notification pipe
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=3,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_interrupt,
@@ -187,7 +187,7 @@ class USBSmartcardInterface(USBInterface):
 
         # TODO: un-hardcode string index (last arg before "verbose")
         super(USBSmartcardInterface, self).__init__(
-                maxusb_app=maxusb_app,
+                app=app,
                 interface_number=0,
                 interface_alternate=0,
                 interface_class=0x0b,
@@ -199,7 +199,7 @@ class USBSmartcardInterface(USBInterface):
                 descriptors=descriptors
         )
 
-        self.device_class = USBSmartcardClass(maxusb_app)
+        self.device_class = USBSmartcardClass(app)
         self.device_class.interface = self
         self.trigger = False
         self.initial_data = b'\x50\x03'
@@ -465,16 +465,16 @@ class USBSmartcardInterface(USBInterface):
     def handle_data_available(self, data):
         self.supported()
         opcode, length, slot, seq = unpack('<BIBB', data[:7])
-        if self.maxusb_app.server_running:
+        if self.app.server_running:
             try:
-                self.maxusb_app.netserver_from_endpoint_sd.send(data)
+                self.app.netserver_from_endpoint_sd.send(data)
             except:
                 print ("Error: No network client connected")
 
             while True:
-                if len(self.maxusb_app.reply_buffer) > 0:
-                    self.maxusb_app.send_on_endpoint(2, self.maxusb_app.reply_buffer)
-                    self.maxusb_app.reply_buffer = ""
+                if len(self.app.reply_buffer) > 0:
+                    self.app.send_on_endpoint(2, self.app.reply_buffer)
+                    self.app.reply_buffer = ""
                     break
         if opcode in self.operations:
             handler = self.operations[opcode]
@@ -483,30 +483,30 @@ class USBSmartcardInterface(USBInterface):
             print("Received Smartcard command not understood")
             response = b''
 
-        if response and not self.maxusb_app.server_running:
-            self.configuration.device.maxusb_app.send_on_endpoint(2, response)
+        if response and not self.app.server_running:
+            self.configuration.device.app.send_on_endpoint(2, response)
 
     def handle_buffer_available(self):
         if not self.trigger:
-            self.configuration.device.maxusb_app.send_on_endpoint(3, self.initial_data)
+            self.configuration.device.app.send_on_endpoint(3, self.initial_data)
             self.trigger = True
 
 
 class USBSmartcardDevice(USBDevice):
     name = "USB Smartcard device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, verbose=0, **kwargs):
-        interface = USBSmartcardInterface(maxusb_app, verbose=verbose)
+    def __init__(self, app, vid, pid, rev, verbose=0, **kwargs):
+        interface = USBSmartcardInterface(app, verbose=verbose)
 
         config = USBConfiguration(
-            maxusb_app=maxusb_app,
+            app=app,
             configuration_index=1,
             configuration_string="Emulated Smartcard",
             interfaces=[interface]
         )
 
         super(USBSmartcardDevice, self).__init__(
-            maxusb_app=maxusb_app,
+            app=app,
             device_class=0,
             device_subclass=0,
             protocol_rel_num=0,

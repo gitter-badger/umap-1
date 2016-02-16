@@ -113,12 +113,12 @@ class USBFtdiVendor(USBVendor):
 class USBFtdiInterface(USBInterface):
     name = "USB FTDI interface"
 
-    def __init__(self, int_num, maxusb_app, verbose=0):
+    def __init__(self, int_num, app, verbose=0):
         descriptors = {}
 
         endpoints = [
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=1,
                 direction=USBEndpoint.direction_out,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -129,7 +129,7 @@ class USBFtdiInterface(USBInterface):
                 handler=self.handle_data_available
             ),
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=3,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -142,7 +142,7 @@ class USBFtdiInterface(USBInterface):
         ]
 
         super(USBFtdiInterface, self).__init__(
-            maxusb_app=maxusb_app,
+            app=app,
             interface_number=int_num,
             interface_alternate=0,
             interface_class=0xff,
@@ -160,24 +160,24 @@ class USBFtdiInterface(USBInterface):
             print(self.name, "received string", st)
         st = st.replace(b'\r', b'\r\n')
         reply = b'\x01\x00' + st
-        self.configuration.device.maxusb_app.send_on_endpoint(3, reply)
+        self.configuration.device.app.send_on_endpoint(3, reply)
 
 
 class USBFtdiDevice(USBDevice):
     name = "USB FTDI device"
 
-    def __init__(self, maxusb_app, verbose=0, **kwargs):
-        interface = USBFtdiInterface(0, maxusb_app, verbose=verbose)
+    def __init__(self, app, verbose=0, **kwargs):
+        interface = USBFtdiInterface(0, app, verbose=verbose)
 
         config = USBConfiguration(
-            maxusb_app=maxusb_app,
+            app=app,
             configuration_index=1,
             configuration_string="FTDI config",
             interfaces=[interface]
         )
 
         super(USBFtdiDevice, self).__init__(
-                maxusb_app=maxusb_app,
+                app=app,
                 device_class=0,
                 device_subclass=0,
                 protocol_rel_num=0,
@@ -192,5 +192,5 @@ class USBFtdiDevice(USBDevice):
                 verbose=verbose
         )
 
-        self.device_vendor = USBFtdiVendor(app=maxusb_app)
+        self.device_vendor = USBFtdiVendor(app=app)
         self.device_vendor.set_device(self)

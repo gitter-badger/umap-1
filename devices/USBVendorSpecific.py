@@ -14,50 +14,42 @@ class USBVendorVendor(USBVendor):
 
     def setup_request_handlers(self):
         self.request_handlers = {
-             0 : self.handle_reset_request
+             0: self.handle_reset_request
         }
 
     def handle_reset_request(self, req):
         if self.verbose > 0:
             print(self.name, "received reset request")
 
-        self.device.maxusb_app.send_on_endpoint(0, b'')
-
+        self.device.app.send_on_endpoint(0, b'')
 
 
 class USBVendorClass(USBClass):
     name = "USB Vendor class"
 
-    def __init__(self, maxusb_app):
+    def __init__(self, app):
 
-        self.maxusb_app = maxusb_app
+        self.app = app
         self.setup_request_handlers()
 
     def setup_request_handlers(self):
         self.request_handlers = {
-            0x01 : self.handle_get_report
+            0x01: self.handle_get_report
         }
 
     def handle_get_report(self, req):
         response = b''
-        self.maxusb_app.send_on_endpoint(0, response)
-
-
+        self.app.send_on_endpoint(0, response)
 
 
 class USBVendorInterface(USBInterface):
     name = "USB Vendor interface"
 
-    def __init__(self, maxusb_app, verbose=0):
-
-        self.maxusb_app = maxusb_app
-
-        descriptors = { }
-
-
-        endpoint = [
+    def __init__(self, app, verbose=0):
+        descriptors = {}
+        endpoints = [
             USBEndpoint(
-                maxusb_app,
+                app,
                 3,          # endpoint number
                 USBEndpoint.direction_in,
                 USBEndpoint.transfer_type_interrupt,
@@ -68,7 +60,7 @@ class USBVendorInterface(USBInterface):
                 self.handle_buffer_available    # handler function
             ),
             USBEndpoint(
-                maxusb_app,
+                app,
                 1,          # endpoint number
                 USBEndpoint.direction_out,
                 USBEndpoint.transfer_type_bulk,
@@ -79,7 +71,7 @@ class USBVendorInterface(USBInterface):
                 self.handle_data_available    # handler function
             ),
             USBEndpoint(
-                maxusb_app,
+                app,
                 2,          # endpoint number
                 USBEndpoint.direction_in,
                 USBEndpoint.transfer_type_bulk,
@@ -91,68 +83,57 @@ class USBVendorInterface(USBInterface):
             )
         ]
 
-
-
         # TODO: un-hardcode string index (last arg before "verbose")
-        USBInterface.__init__(
-                self,
-                maxusb_app,
-                0,          # interface number
-                0,          # alternate setting
-                0xff,       # 3 interface class
-                0xff,          # 0 subclass
-                0xff,          # 0 protocol
-                0,          # string index
-                verbose,
-                endpoint,
-                descriptors
+        super(USBVendorInterface, self).__init__(
+                app=app,
+                interface_number=0,          # interface number
+                interface_alternate=0,          # alternate setting
+                interface_class=0xff,       # 3 interface class
+                interface_subclass=0xff,          # 0 subclass
+                interface_protocol=0xff,          # 0 protocol
+                interface_string_index=0,          # string index
+                verbose=verbose,
+                endpoints=endpoints,
+                descriptors=descriptors
         )
 
-        self.device_class = USBVendorClass(maxusb_app)
+        self.device_class = USBVendorClass(app)
+        self.device_class.interface = self
 
-
-    def handle_data_available(self,data):
-        return        
-
+    def handle_data_available(self, data):
+        return
 
     def handle_buffer_available(self):
         return
 
 
-
 class USBVendorDevice(USBDevice):
     name = "USB Vendor device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, verbose=0):
-
-
-        interface = USBVendorInterface(maxusb_app, verbose=verbose)
-
+    def __init__(self, app, vid, pid, rev, verbose=0, **kwargs):
+        interface = USBVendorInterface(app, verbose=verbose)
         config = USBConfiguration(
-                maxusb_app,
-                1,                                          # index
-                "Vendor device",    # string desc
-                [ interface ]                  # interfaces
+                app=app,
+                configuration_index=1,                                          # index
+                configuration_string="Vendor device",    # string desc
+                interfaces=[interface]                  # interfaces
         )
 
-        USBDevice.__init__(
-                self,
-                maxusb_app,
-                0xff,                   # 0 device class
-		        0xff,                   # device subclass
-                0xff,                   # protocol release number
-                64,                     # max packet size for endpoint 0
-		        vid,                    # vendor id
-                pid,                    # product id
-		        rev,                    # device revision
-                "Vendor",              # manufacturer string
-                "Product",   # product string
-                "00000000",    # serial number string
-                [ config ],
-                verbose=verbose
+        super(USBVendorDevice, self).__init__(
+            app=app,
+            device_class=0xff,
+            device_subclass=0xff,
+            protocol_rel_num=0xff,
+            max_packet_size_ep0=64,
+            vendor_id=vid,
+            product_id=pid,
+            device_rev=rev,
+            manufacturer_string="Vendor",
+            product_string="Product",
+            serial_number_string="00000000",
+            configurations=[config],
+            verbose=verbose
         )
 
         self.device_vendor = USBVendorVendor()
         self.device_vendor.set_device(self)
-
-

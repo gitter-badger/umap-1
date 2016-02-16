@@ -1,12 +1,13 @@
 # USBConfiguration.py
 #
 # Contains class definition for USBConfiguration.
+from struct import pack
 
 
 class USBConfiguration:
 
-    def __init__(self, maxusb_app, configuration_index, configuration_string, interfaces):
-        self.maxusb_app = maxusb_app
+    def __init__(self, app, configuration_index, configuration_string, interfaces):
+        self.app = app
         self.configuration_index = configuration_index
         self.configuration_string = configuration_string
         self.configuration_string_index = 0
@@ -34,15 +35,15 @@ class USBConfiguration:
         bDescriptorType = 2
         wTotalLength = len(interface_descriptors) + 9
         bNumInterfaces = len(self.interfaces)
-        d = bytes([
-                bLength,          # length of descriptor in bytes
-                bDescriptorType,          # descriptor type 2 == configuration
-                wTotalLength & 0xff,
-                (wTotalLength >> 8) & 0xff,
-                bNumInterfaces,
-                self.configuration_index,
-                self.configuration_string_index,
-                self.attributes,
-                self.max_power
-        ])
+        d = pack(
+            '<BBHBBBBB',
+            bLength,
+            bDescriptorType,
+            wTotalLength,
+            bNumInterfaces,
+            self.configuration_index,
+            self.configuration_string_index,
+            self.attributes,
+            self.max_power
+        )
         return d + interface_descriptors

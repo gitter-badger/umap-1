@@ -66,10 +66,10 @@ class USBMassStorageClass(USBClass):
         }
 
     def handle_bulk_only_mass_storage_reset_request(self, req):
-        self.interface.configuration.device.maxusb_app.send_on_endpoint(0, b'')
+        self.interface.configuration.device.app.send_on_endpoint(0, b'')
 
     def handle_get_max_lun_request(self, req):
-        self.interface.configuration.device.maxusb_app.send_on_endpoint(0, b'\x00')
+        self.interface.configuration.device.app.send_on_endpoint(0, b'\x00')
 
 
 class USBMassStorageInterface(USBInterface):
@@ -78,14 +78,13 @@ class USBMassStorageInterface(USBInterface):
     '''
     name = "USB mass storage interface"
 
-    def __init__(self, maxusb_app, disk_image, usbclass, sub, proto, verbose=0):
+    def __init__(self, app, disk_image, usbclass, sub, proto, verbose=0):
         self.disk_image = disk_image
-        self.maxusb_app = maxusb_app
         descriptors = {}
 
         endpoints = [
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=1,
                 direction=USBEndpoint.direction_out,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -96,7 +95,7 @@ class USBMassStorageInterface(USBInterface):
                 handler=self.handle_data_available
             ),
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=3,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -110,7 +109,7 @@ class USBMassStorageInterface(USBInterface):
 
         # TODO: un-hardcode string index (last arg before "verbose")
         super(USBMassStorageInterface, self).__init__(
-                maxusb_app=maxusb_app,
+                app=app,
                 interface_number=0,
                 interface_alternate=0,
                 interface_class=usbclass,
@@ -122,7 +121,7 @@ class USBMassStorageInterface(USBInterface):
                 descriptors=descriptors
         )
 
-        self.device_class = USBMassStorageClass(maxusb_app, verbose)
+        self.device_class = USBMassStorageClass(app, verbose)
         self.device_class.set_interface(self)
 
         self.is_write_in_progress = False
@@ -245,8 +244,8 @@ class USBMassStorageInterface(USBInterface):
         '''
         .. todo:: do we want to fuzz each message in the inner loop separatley?
         '''
-        if self.maxusb_app.mode == 4:
-            self.maxusb_app.stop = True
+        if self.app.mode == 4:
+            self.app.stop = True
 
         base_lba = unpack('>I', cbw.cb[1:5])[0]
         num_blocks = unpack('>H', cbw.cb[7:9])[0]
@@ -258,7 +257,7 @@ class USBMassStorageInterface(USBInterface):
         # something in 'response' and letting the end of the switch send
         for block_num in range(num_blocks):
             data = self.disk_image.get_sector_data(base_lba + block_num)
-            self.configuration.device.maxusb_app.send_on_endpoint(3, data)
+            self.configuration.device.app.send_on_endpoint(3, data)
 
     @mutable('scsi_write_6_response')
     def handle_write_6(self, cbw):
@@ -335,16 +334,16 @@ class USBMassStorageInterface(USBInterface):
         status = 0              # default to success
         response = None         # with no response data
 
-        if self.maxusb_app.server_running:
+        if self.app.server_running:
             try:
-                self.maxusb_app.netserver_from_endpoint_sd.send(data)
+                self.app.netserver_from_endpoint_sd.send(data)
             except:
                 print ("Error: No network client connected")
 
             while True:
-                if len(self.maxusb_app.reply_buffer) > 0:
-                    self.maxusb_app.send_on_endpoint(3, self.maxusb_app.reply_buffer)
-                    self.maxusb_app.reply_buffer = ""
+                if len(self.app.reply_buffer) > 0:
+                    self.app.send_on_endpoint(3, self.app.reply_buffer)
+                    self.app.reply_buffer = ""
                     break
 
         elif self.is_write_in_progress:
@@ -381,10 +380,10 @@ class USBMassStorageInterface(USBInterface):
             if cbw.data_transfer_length > 0:
                 response = bytes([0] * cbw.data_transfer_length)
 
-        if response and not self.maxusb_app.server_running:
+        if response and not self.app.server_running:
             if self.verbose > 2:
                 print(self.name, "responding with", len(response), "bytes:", bytes_as_hex(response))
-            self.configuration.device.maxusb_app.send_on_endpoint(3, response)
+            self.configuration.device.app.send_on_endpoint(3, response)
 
         csw = bytes([
             ord('U'), ord('S'), ord('B'), ord('S'),
@@ -396,7 +395,7 @@ class USBMassStorageInterface(USBInterface):
         if self.verbose > 3:
             print(self.name, "responding with status =", status)
 
-        self.configuration.device.maxusb_app.send_on_endpoint(3, csw)
+        self.configuration.device.app.send_on_endpoint(3, csw)
 
 
 class DiskImage:
@@ -462,19 +461,19 @@ class CommandBlockWrapper:
 class USBMassStorageDevice(USBDevice):
     name = "USB mass storage device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, usbclass, subclass, proto, disk_image_filename='stick.img', verbose=0):
+    def __init__(self, app, vid, pid, rev, usbclass, subclass, proto, disk_image_filename='stick.img', verbose=0):
         self.disk_image = DiskImage(disk_image_filename, 512)
-        interface = USBMassStorageInterface(maxusb_app, self.disk_image, usbclass, subclass, proto, verbose=verbose)
+        interface = USBMassStorageInterface(app, self.disk_image, usbclass, subclass, proto, verbose=verbose)
 
         config = USBConfiguration(
-                maxusb_app=maxusb_app,
+                app=app,
                 configuration_index=1,
                 configuration_string="MassStorage config",
                 interfaces=[interface]
         )
 
         super(USBMassStorageDevice, self).__init__(
-                maxusb_app=maxusb_app,
+                app=app,
                 device_class=0,
                 device_subclass=0,
                 protocol_rel_num=0,

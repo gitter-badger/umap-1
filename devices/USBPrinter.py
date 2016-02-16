@@ -52,8 +52,7 @@ class USBPrinterClass(USBClass):
 class USBPrinterInterface(USBInterface):
     name = "USB printer interface"
 
-    def __init__(self, int_num, maxusb_app, usbclass, sub, proto, verbose=0):
-        self.maxusb_app = maxusb_app
+    def __init__(self, int_num, app, usbclass, sub, proto, verbose=0):
         self.filename = time.strftime("%Y%m%d%H%M%S", time.localtime())
         self.filename += ".pcl"
         self.writing = False
@@ -62,7 +61,7 @@ class USBPrinterInterface(USBInterface):
 
         endpoints0 = [
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=1,          # endpoint address
                 direction=USBEndpoint.direction_out,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -73,7 +72,7 @@ class USBPrinterInterface(USBInterface):
                 handler=self.handle_data_available    # handler function
             ),
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=0x81,          # endpoint address
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -87,7 +86,7 @@ class USBPrinterInterface(USBInterface):
 
         endpoints1 = [
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=0x0b,          # endpoint address
                 direction=USBEndpoint.direction_out,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -98,7 +97,7 @@ class USBPrinterInterface(USBInterface):
                 handler=self.handle_data_available    # handler function
             ),
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=0x8b,          # endpoint address
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -116,7 +115,7 @@ class USBPrinterInterface(USBInterface):
 
         # TODO: un-hardcode string index (last arg before "verbose")
         super(USBPrinterInterface, self).__init__(
-                maxusb_app=maxusb_app,
+                app=app,
                 interface_number=int_num,          # interface number
                 interface_alternate=0,          # alternate setting
                 interface_class=usbclass,     # interface class
@@ -128,7 +127,7 @@ class USBPrinterInterface(USBInterface):
                 descriptors=descriptors
         )
 
-        self.device_class = USBPrinterClass(maxusb_app, verbose)
+        self.device_class = USBPrinterClass(app, verbose)
         self.device_class.set_interface(self)
 
         self.is_write_in_progress = False
@@ -150,25 +149,25 @@ class USBPrinterInterface(USBInterface):
         if 'EOJ\n' in text_buffer:
             print ("File write complete")
             out_file.close()
-            self.maxusb_app.stop = True
+            self.app.stop = True
 
 
 class USBPrinterDevice(USBDevice):
     name = "USB printer device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, usbclass, subclass, proto, verbose=0):
+    def __init__(self, app, vid, pid, rev, usbclass, subclass, proto, verbose=0):
         interfaces = [
-            USBPrinterInterface(0, maxusb_app, usbclass, subclass, proto, verbose=verbose),
-            USBPrinterInterface(1, maxusb_app, 0xff, 1, 1, verbose=verbose),
+            USBPrinterInterface(0, app, usbclass, subclass, proto, verbose=verbose),
+            USBPrinterInterface(1, app, 0xff, 1, 1, verbose=verbose),
         ]
         config = USBConfiguration(
-                maxusb_app=maxusb_app,
+                app=app,
                 configuration_index=1,
                 configuration_string="Printer",
                 interfaces=interfaces
         )
         super(USBPrinterDevice, self).__init__(
-                maxusb_app=maxusb_app,
+                app=app,
                 device_class=0,
                 device_subclass=0,
                 protocol_rel_num=0,

@@ -2,21 +2,22 @@
 #
 # Contains class definitions for USBDevice and USBDeviceRequest.
 
+import sys
 from USB import *
 from USBClass import *
-import sys
 import traceback
+
 
 class USBDevice:
     name = "generic device"
 
     def __init__(
-            self, maxusb_app, device_class, device_subclass,
+            self, app, device_class, device_subclass,
             protocol_rel_num, max_packet_size_ep0, vendor_id, product_id,
             device_rev, manufacturer_string, product_string,
             serial_number_string, configurations=[], descriptors={},
             verbose=0):
-        self.maxusb_app = maxusb_app
+        self.app = app
         self.verbose = verbose
 
         self.supported_device_class_trigger = False
@@ -88,28 +89,28 @@ class USBDevice:
         }
 
     def connect(self):
-        self.maxusb_app.connect(self)
+        self.app.connect(self)
 
         # skipping USB.state_attached may not be strictly correct (9.1.1.{1,2})
         self.state = USB.state_powered
 
     def disconnect(self):
-        self.maxusb_app.disconnect()
-        self.maxusb_app.server_running = False
+        self.app.disconnect()
+        self.app.server_running = False
 
-        if self.maxusb_app.netserver_to_endpoint_sd:
-            self.maxusb_app.netserver_to_endpoint_sd.close()
+        if self.app.netserver_to_endpoint_sd:
+            self.app.netserver_to_endpoint_sd.close()
 
-        if self.maxusb_app.netserver_from_endpoint_sd:
-            self.maxusb_app.netserver_from_endpoint_sd.close()
+        if self.app.netserver_from_endpoint_sd:
+            self.app.netserver_from_endpoint_sd.close()
 
         self.state = USB.state_detached
 
     def run(self):
-        self.maxusb_app.service_irqs()
+        self.app.service_irqs()
 
     def ack_status_stage(self):
-        self.maxusb_app.ack_status_stage()
+        self.app.ack_status_stage()
 
     def get_descriptor(self, n):
 
@@ -187,7 +188,7 @@ class USBDevice:
         if not recipient:
             if self.verbose > 0:
                 print(self.name, "invalid recipient, stalling")
-            self.maxusb_app.stall_ep0()
+            self.app.stall_ep0()
             return
 
         # and then the type
@@ -203,7 +204,7 @@ class USBDevice:
         if not handler_entity:
             if self.verbose > 0:
                 print(self.name, "invalid handler entity, stalling")
-            self.maxusb_app.stall_ep0()
+            self.app.stall_ep0()
             return
 
         if handler_entity == 9:  # HACK: for hub class
@@ -217,23 +218,23 @@ class USBDevice:
 
         if not handler:
 
-            if self.maxusb_app.mode == 2 or self.maxusb_app.mode == 3:
+            if self.app.mode == 2 or self.app.mode == 3:
 
-                self.maxusb_app.stop = True
+                self.app.stop = True
                 return
 
-            if self.maxusb_app.mode == 1:
+            if self.app.mode == 1:
 
                 print ("**SUPPORTED???**")
-                if self.maxusb_app.fplog:
-                    self.maxusb_app.fplog.write ("**SUPPORTED???**\n")
-                self.maxusb_app.stop = True
+                if self.app.fplog:
+                    self.app.fplog.write ("**SUPPORTED???**\n")
+                self.app.stop = True
                 return
 
             else:
 
                 print(self.name, "invalid handler, stalling")
-                self.maxusb_app.stall_ep0()
+                self.app.stall_ep0()
 
         try:
             handler(req)
@@ -265,7 +266,7 @@ class USBDevice:
     def handle_get_status_request(self, req):
 
         trace = "Dev:GetSta"
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
 
         if self.verbose > 2:
@@ -274,32 +275,32 @@ class USBDevice:
         # self-powered and remote-wakeup (USB 2.0 Spec section 9.4.5)
 #        response = b'\x03\x00'
         response = b'\x01\x00'
-        self.maxusb_app.send_on_endpoint(0, response)
+        self.app.send_on_endpoint(0, response)
 
     # USB 2.0 specification, section 9.4.1 (p 280 of pdf)
     def handle_clear_feature_request(self, req):
 
         trace = "Dev:CleFea:%d:%d" % (req.request_type, req.value)
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
         if self.verbose > 2:
             print(self.name, "received CLEAR_FEATURE request with type 0x%02x and value 0x%02x" \
                 % (req.request_type, req.value))
 
-        #self.maxusb_app.send_on_endpoint(0, b'')
+        #self.app.send_on_endpoint(0, b'')
 
     # USB 2.0 specification, section 9.4.9 (p 286 of pdf)
     def handle_set_feature_request(self, req):
 
         trace = "Dev:SetFea"
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
 
         if self.verbose > 2:
             print(self.name, "received SET_FEATURE request")
 
         response = b''
-        self.maxusb_app.send_on_endpoint(0, response)
+        self.app.send_on_endpoint(0, response)
 
 
 
@@ -311,7 +312,7 @@ class USBDevice:
         self.ack_status_stage()
 
         trace = "Dev:SetAdr:%d" % self.address
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
         if self.verbose > 2:
             print(self.name, "received SET_ADDRESS request for address",
@@ -327,7 +328,7 @@ class USBDevice:
         response = None
 
         trace = "Dev:GetDes:%d:%d" % (dtype,dindex)
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
         if self.verbose > 2:
             print(self.name, ("received GET_DESCRIPTOR req %d, index %d, " \
@@ -341,14 +342,14 @@ class USBDevice:
 
         if response:
             n = min(n, len(response))
-            self.maxusb_app.verbose += 1
-            self.maxusb_app.send_on_endpoint(0, response[:n])
-            self.maxusb_app.verbose -= 1
+            self.app.verbose += 1
+            self.app.send_on_endpoint(0, response[:n])
+            self.app.verbose -= 1
 
             if self.verbose > 5:
                 print(self.name, "sent", n, "bytes in response")
         else:
-            self.maxusb_app.stall_ep0()
+            self.app.stall_ep0()
 
     def handle_get_configuration_descriptor_request(self, num):
         if num < len(self.configurations):
@@ -412,7 +413,7 @@ class USBDevice:
     def handle_set_descriptor_request(self, req):
 
         trace = "Dev:SetDes"
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
         if self.verbose > 0:
             print(self.name, "received SET_DESCRIPTOR request")
@@ -421,12 +422,12 @@ class USBDevice:
     def handle_get_configuration_request(self, req):
 
         trace = "Dev:GetCon"
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
 
         if self.verbose > 0:
             print(self.name, "received GET_CONFIGURATION request")
-        self.maxusb_app.send_on_endpoint(0, b'\x01') #HACK - once configuration supported
+        self.app.send_on_endpoint(0, b'\x01') #HACK - once configuration supported
 
 
 
@@ -434,7 +435,7 @@ class USBDevice:
     def handle_set_configuration_request(self, req):
 
         trace = "Dev:SetCon"
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
         if self.verbose > 0:
             print(self.name, "received SET_CONFIGURATION request")
@@ -459,7 +460,7 @@ class USBDevice:
     def handle_get_interface_request(self, req):
 
         trace = "Dev:GetInt"
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
 
         if self.verbose > 0:
@@ -467,27 +468,27 @@ class USBDevice:
 
         if req.index == 0:
             # HACK: currently only support one interface
-            self.maxusb_app.send_on_endpoint(0, b'\x00')
+            self.app.send_on_endpoint(0, b'\x00')
         else:
-            self.maxusb_app.stall_ep0()
+            self.app.stall_ep0()
 
     # USB 2.0 specification, section 9.4.10 (p 288 of pdf)
     def handle_set_interface_request(self, req):
 
         trace = "Dev:SetInt"
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
 
         if self.verbose > 1:
             print(self.name, "received SET_INTERFACE request")
 
-        self.maxusb_app.send_on_endpoint(0, b'')
+        self.app.send_on_endpoint(0, b'')
 
     # USB 2.0 specification, section 9.4.11 (p 288 of pdf)
     def handle_synch_frame_request(self, req):
 
         trace = "Dev:SynFra"
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
         if self.verbose > 0:
             print(self.name, "received SYNCH_FRAME request")

@@ -80,10 +80,9 @@ def encode_string(st):
 class USBImageInterface(USBInterface):
     name = "USB image interface"
 
-    def __init__(self, int_num, maxusb_app, thumb_image, partial_image, usbclass, sub, proto, verbose=0):
+    def __init__(self, int_num, app, thumb_image, partial_image, usbclass, sub, proto, verbose=0):
         self.thumb_image = thumb_image
         self.partial_image = partial_image
-        self.maxusb_app = maxusb_app
         self.operations = {
             Opcodes.GetDeviceInfo: (self.op_GetDeviceInfo_1, self.op_GetDeviceInfo_2),
             Opcodes.OpenSession: (self.op_OpenSession_1, self.op_OpenSession_2),
@@ -106,7 +105,7 @@ class USBImageInterface(USBInterface):
 
         endpoints = [
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=1,
                 direction=USBEndpoint.direction_out,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -117,7 +116,7 @@ class USBImageInterface(USBInterface):
                 handler=self.handle_ep1_data_available
             ),
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=0x2,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_bulk,
@@ -128,7 +127,7 @@ class USBImageInterface(USBInterface):
                 handler=self.handle_ep2_buffer_available
             ),
             USBEndpoint(
-                maxusb_app=maxusb_app,
+                app=app,
                 number=0x3,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_interrupt,
@@ -142,7 +141,7 @@ class USBImageInterface(USBInterface):
 
         # TODO: un-hardcode string index (last arg before "verbose")
         super(USBImageInterface, self).__init__(
-                maxusb_app=maxusb_app,
+                app=app,
                 interface_number=int_num,
                 interface_alternate=0,
                 interface_class=usbclass,
@@ -154,7 +153,7 @@ class USBImageInterface(USBInterface):
                 descriptors=descriptors
         )
 
-        self.device_class = USBImageClass(maxusb_app, verbose)
+        self.device_class = USBImageClass(app, verbose)
         self.device_class.set_interface(self)
 
     def create_send_ok(self, transaction_id):
@@ -184,15 +183,15 @@ class USBImageInterface(USBInterface):
         response = None
         response2 = None
 
-        if self.maxusb_app.server_running:
+        if self.app.server_running:
             try:
-                self.maxusb_app.netserver_from_endpoint_sd.send(data)
+                self.app.netserver_from_endpoint_sd.send(data)
             except:
                 print ("Error: No network client connected")
             while True:
-                if len(self.maxusb_app.reply_buffer) > 0:
-                    self.maxusb_app.send_on_endpoint(2, self.maxusb_app.reply_buffer)
-                    self.maxusb_app.reply_buffer = ""
+                if len(self.app.reply_buffer) > 0:
+                    self.app.send_on_endpoint(2, self.app.reply_buffer)
+                    self.app.reply_buffer = ""
                     break
 
         if opcode in self.operations:
@@ -207,17 +206,17 @@ class USBImageInterface(USBInterface):
             if op2:
                 response2 = op2(container, fuzzing_data=fuzzing_data)
 
-        if response and not self.maxusb_app.server_running:
+        if response and not self.app.server_running:
             print('[*] Response: %s' % hexlify(response))
             if self.verbose > 2:
                 print(self.name, "responding with", len(response), "bytes:", bytes_as_hex(response))
-            self.configuration.device.maxusb_app.send_on_endpoint(2, response)
+            self.configuration.device.app.send_on_endpoint(2, response)
 
-        if response2 and not self.maxusb_app.server_running:
+        if response2 and not self.app.server_running:
             print('[*] Response2: %s' % hexlify(response2))
             if self.verbose > 2:
                 print(self.name, "responding with", len(response2), "bytes:", bytes_as_hex(response2))
-            self.configuration.device.maxusb_app.send_on_endpoint(2, response2)
+            self.configuration.device.app.send_on_endpoint(2, response2)
 
     @mutable('image_OpenSession_response1')
     def op_OpenSession_1(self, container, **kwargs):
@@ -512,21 +511,21 @@ class ContainerRequestWrapper:
 class USBImageDevice(USBDevice):
     name = "USB image device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, usbclass, subclass, proto, thumb_image_filename='ncc_group_logo.jpg', verbose=0):
+    def __init__(self, app, vid, pid, rev, usbclass, subclass, proto, thumb_image_filename='ncc_group_logo.jpg', verbose=0):
         self.thumb_image = ThumbImage(thumb_image_filename)
         self.partial_image = ThumbImage("ncc_group_logo.bin")
 
-        interface = USBImageInterface(0, maxusb_app, self.thumb_image, self.partial_image, usbclass, subclass, proto, verbose=verbose)
+        interface = USBImageInterface(0, app, self.thumb_image, self.partial_image, usbclass, subclass, proto, verbose=verbose)
 
         config = USBConfiguration(
-                maxusb_app=maxusb_app,
+                app=app,
                 configuration_index=1,
                 configuration_string="Image",
                 interfaces=[interface]
         )
 
         super(USBImageDevice, self).__init__(
-                maxusb_app=maxusb_app,
+                app=app,
                 device_class=0,  # shouldn't it be 6?
                 device_subclass=0,
                 protocol_rel_num=0,

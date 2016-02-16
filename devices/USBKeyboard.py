@@ -44,16 +44,14 @@ class USBKeyboardClass(USBClass):
 class USBKeyboardInterface(USBInterface):
     name = "USB keyboard interface"
 
-    def __init__(self, maxusb_app, verbose=0):
-        self.maxusb_app = maxusb_app
-
+    def __init__(self, app, verbose=0):
         descriptors = {
             USB.desc_type_hid: self.get_hid_descriptor,
             USB.desc_type_report: self.get_report_descriptor
         }
 
         endpoint = USBEndpoint(
-            maxusb_app=maxusb_app,
+            app=app,
             number=3,
             direction=USBEndpoint.direction_in,
             transfer_type=USBEndpoint.transfer_type_interrupt,
@@ -66,7 +64,7 @@ class USBKeyboardInterface(USBInterface):
 
         # TODO: un-hardcode string index (last arg before "verbose")
         super(USBKeyboardInterface, self).__init__(
-            maxusb_app=maxusb_app,
+            app=app,
             interface_number=0,
             interface_alternate=0,
             interface_class=3,
@@ -78,7 +76,7 @@ class USBKeyboardInterface(USBInterface):
             descriptors=descriptors
         )
 
-        self.device_class = USBKeyboardClass(maxusb_app, verbose)
+        self.device_class = USBKeyboardClass(app, verbose)
 
         empty_preamble = [0x00] * 10
         # text = [0x0f, 0x00, 0x16, 0x00, 0x28, 0x00]
@@ -175,22 +173,22 @@ class USBKeyboardInterface(USBInterface):
         if self.verbose > 4:
             print(self.name, "sending keypress 0x%02x" % ord(letter))
 
-        self.configuration.device.maxusb_app.send_on_endpoint(3, data)
+        self.configuration.device.app.send_on_endpoint(3, data)
 
 
 class USBKeyboardDevice(USBDevice):
     name = "USB keyboard device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, verbose=0, **kwargs):
-        interface = USBKeyboardInterface(maxusb_app, verbose=verbose)
+    def __init__(self, app, vid, pid, rev, verbose=0, **kwargs):
+        interface = USBKeyboardInterface(app, verbose=verbose)
         config = USBConfiguration(
-            maxusb_app=maxusb_app,
+            app=app,
             configuration_index=1,
             configuration_string="Emulated Keyboard",
             interfaces=[interface]
         )
         super(USBKeyboardDevice, self).__init__(
-            maxusb_app=maxusb_app,
+            app=app,
             device_class=0,
             device_subclass=0,
             protocol_rel_num=0,

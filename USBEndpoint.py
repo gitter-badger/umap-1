@@ -1,6 +1,7 @@
 # USBEndpoint.py
 #
 # Contains class definition for USBEndpoint.
+from struct import pack
 
 
 class USBEndpoint:
@@ -22,11 +23,11 @@ class USBEndpoint:
     usage_type_implicit_feedback = 0x02
 
     def __init__(
-            self, maxusb_app, number, direction, transfer_type, sync_type,
+            self, app, number, direction, transfer_type, sync_type,
             usage_type, max_packet_size, interval, handler):
         '''
-        :type maxusb_app: :class:`~MAXUSBApp.MAXUSBApp`
-        :param maxusb_app: application
+        :type app: :class:`~MAXUSBApp.MAXUSBApp`
+        :param app: application
         :param number: endpoint number
         :param direction: endpoint direction (direction_in/direction_out)
         :param transfer_type: one of USBEndpoint.transfer_type\*
@@ -41,7 +42,7 @@ class USBEndpoint:
 
         .. note:: OUT endpoint is 1, IN endpoint is either 2 or 3
         '''
-        self.maxusb_app = maxusb_app
+        self.app = app
         self.number = number
         self.direction = direction
         self.transfer_type = transfer_type
@@ -57,10 +58,10 @@ class USBEndpoint:
         }
 
     def handle_clear_feature_request(self, req):
-        if self.maxusb_app.mode != 2:
-            #print("received CLEAR_FEATURE request for endpoint", self.number,
+        if self.app.mode != 2:
+            # print("received CLEAR_FEATURE request for endpoint", self.number,
             #        "with value", req.value)
-            self.interface.configuration.device.maxusb_app.send_on_endpoint(0, b'')
+            self.interface.configuration.device.app.send_on_endpoint(0, b'')
 
     def set_interface(self, interface):
         self.interface = interface
@@ -78,15 +79,13 @@ class USBEndpoint:
         bEndpointAddress = address
         wMaxPacketSize = self.max_packet_size
 
-        d = bytearray([
-            bLength,          # length of descriptor in bytes
-            bDescriptorType,          # descriptor type 5 == endpoint
+        d = pack(
+            '<BBBBIB',
+            bLength,
+            bDescriptorType,
             bEndpointAddress,
             attributes,
-            (wMaxPacketSize >> 8) & 0xff,
-            wMaxPacketSize & 0xff,
+            wMaxPacketSize,
             self.interval
-        ])
-
+        )
         return d
-

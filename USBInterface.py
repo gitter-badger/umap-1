@@ -4,14 +4,15 @@
 
 from USB import *
 
+
 class USBInterface:
     name = "generic USB interface"
 
-    def __init__(self, maxusb_app, interface_number, interface_alternate, interface_class,
+    def __init__(self, app, interface_number, interface_alternate, interface_class,
             interface_subclass, interface_protocol, interface_string_index,
-            verbose=0, endpoints=[], descriptors={}, cs_interfaces=[]):
+            verbose=0, endpoints=None, descriptors=None, cs_interfaces=None):
 
-        self.maxusb_app = maxusb_app
+        self.app = app
         self.number = interface_number
         self.alternate = interface_alternate
         self.iclass = interface_class
@@ -19,17 +20,17 @@ class USBInterface:
         self.protocol = interface_protocol
         self.string_index = interface_string_index
 
-        self.endpoints = endpoints
-        self.descriptors = descriptors
-        self.cs_interfaces = cs_interfaces
+        self.endpoints = [] if endpoints is None else endpoints
+        self.descriptors = {} if descriptors is None else descriptors
+        self.cs_interfaces = [] if cs_interfaces is None else cs_interfaces
 
         self.verbose = verbose
 
         self.descriptors[USB.desc_type_interface] = self.get_descriptor
 
         self.request_handlers = {
-             6 : self.handle_get_descriptor_request,
-            11 : self.handle_set_interface_request
+            0x06: self.handle_get_descriptor_request,
+            0x0b: self.handle_set_interface_request
         }
 
         self.configuration = None
@@ -44,7 +45,7 @@ class USBInterface:
         self.configuration = config
 
     def get_mutation(self, stage, data=None):
-        return self.maxusb_app.get_mutation(stage, data)
+        return self.app.get_mutation(stage, data)
 
     # USB 2.0 specification, section 9.4.3 (p 281 of pdf)
     # HACK: blatant copypasta from USBDevice pains me deeply
@@ -57,7 +58,7 @@ class USBInterface:
         response = None
 
         trace = "Int:GetDes:%d:%d" % (dtype,dindex)
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
         if self.verbose > 2:
             print(self.name, ("received GET_DESCRIPTOR req %d, index %d, " \
@@ -71,20 +72,20 @@ class USBInterface:
 
         if response:
             n = min(n, len(response))
-            self.configuration.device.maxusb_app.send_on_endpoint(0, response[:n])
+            self.configuration.device.app.send_on_endpoint(0, response[:n])
 
             if self.verbose > 5:
                 print(self.name, "sent", n, "bytes in response")
 
     def handle_set_interface_request(self, req):
         trace = "Int:SetInt" 
-        self.maxusb_app.fingerprint.append(trace)
+        self.app.fingerprint.append(trace)
 
         if self.verbose > 0:
             print(self.name, "received SET_INTERFACE request")
 
-        self.configuration.device.maxusb_app.stall_ep0()
-        #self.configuration.device.maxusb_app.send_on_endpoint(0, b'')
+        self.configuration.device.app.stall_ep0()
+        #self.configuration.device.app.send_on_endpoint(0, b'')
 
     # Table 9-12 of USB 2.0 spec (pdf page 296)
     def get_descriptor(self):
@@ -126,8 +127,8 @@ class USBInterface:
         Mark current USB class as supported by the host.
         This will tell the application to stop emulating current device.
         '''
-        if self.maxusb_app.mode == 1:
+        if self.app.mode == 1:
             print (' **SUPPORTED**')
-            if self.maxusb_app.fplog:
-                self.maxusb_app.fplog.write(" **SUPPORTED**\n")
-            self.maxusb_app.stop = True
+            if self.app.fplog:
+                self.app.fplog.write(" **SUPPORTED**\n")
+            self.app.stop = True

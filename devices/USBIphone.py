@@ -24,12 +24,12 @@ class USBIphoneVendor(USBVendor):
     def handle_40_request(self, req):
         if self.verbose > 0:
             print(self.name, "received reset request")
-        self.device.maxusb_app.send_on_endpoint(0, b'')
+        self.device.app.send_on_endpoint(0, b'')
 
     def handle_45_request(self, req):
         if self.verbose > 0:
             print(self.name, "received reset request")
-        self.device.maxusb_app.send_on_endpoint(0, b'\x03')
+        self.device.app.send_on_endpoint(0, b'\x03')
 
 
 class USBIphoneClass(USBClass):
@@ -42,23 +42,23 @@ class USBIphoneClass(USBClass):
         }
 
     def handle_set_control_line_state(self, req):
-        self.maxusb_app.send_on_endpoint(0, b'')
+        self.app.send_on_endpoint(0, b'')
         self.supported()
 
     def handle_set_line_coding(self, req):
-        self.maxusb_app.send_on_endpoint(0, b'')
+        self.app.send_on_endpoint(0, b'')
         self.supported()
 
 
 class USBIphoneInterface(USBInterface):
     name = "USB iPhone interface"
 
-    def __init__(self, int_num, maxusb_app, usbclass, sub, proto, verbose=0):
+    def __init__(self, int_num, app, usbclass, sub, proto, verbose=0):
         descriptors = {}
 
         endpoints0 = [
             USBEndpoint(
-                maxusb_app,
+                app,
                 0x02,           # endpoint address
                 USBEndpoint.direction_out,
                 USBEndpoint.transfer_type_bulk,
@@ -69,7 +69,7 @@ class USBIphoneInterface(USBInterface):
                 self.handle_data_available    # handler function
             ),
             USBEndpoint(
-                maxusb_app,
+                app,
                 0x81,           # endpoint address
                 USBEndpoint.direction_in,
                 USBEndpoint.transfer_type_bulk,
@@ -80,7 +80,7 @@ class USBIphoneInterface(USBInterface):
                 self.handle_data_available    # handler function
             ),
             USBEndpoint(
-                maxusb_app,
+                app,
                 0x83,           # endpoint address
                 USBEndpoint.direction_in,
                 USBEndpoint.transfer_type_interrupt,
@@ -94,7 +94,7 @@ class USBIphoneInterface(USBInterface):
         ]
         endpoints1 = [
             USBEndpoint(
-                maxusb_app,
+                app,
                 0x04,           # endpoint address
                 USBEndpoint.direction_out,
                 USBEndpoint.transfer_type_bulk,
@@ -105,7 +105,7 @@ class USBIphoneInterface(USBInterface):
                 self.handle_data_available    # handler function
             ),
             USBEndpoint(
-                maxusb_app,
+                app,
                 0x85,           # endpoint address
                 USBEndpoint.direction_in,
                 USBEndpoint.transfer_type_bulk,
@@ -128,7 +128,7 @@ class USBIphoneInterface(USBInterface):
         # TODO: un-hardcode string index (last arg before "verbose")
         USBInterface.__init__(
                 self,
-                maxusb_app,
+                app,
                 int_num,          # interface number
                 0,          # alternate setting
                 usbclass,          # 3 interface class
@@ -140,7 +140,7 @@ class USBIphoneInterface(USBInterface):
                 descriptors
         )
 
-        self.device_class = USBIphoneClass(maxusb_app)
+        self.device_class = USBIphoneClass(app)
         self.device_class.set_interface(self)
 
     def handle_data_available(self, data):
@@ -151,36 +151,36 @@ class USBIphoneInterface(USBInterface):
 class USBIphoneDevice(USBDevice):
     name = "USB iPhone device"
 
-    def __init__(self, maxusb_app, vid, pid, rev, verbose=0):
+    def __init__(self, app, vid, pid, rev, verbose=0):
         int_class = 0
         int_subclass = 0
         int_proto = 0
-        interface0 = USBIphoneInterface(0, maxusb_app, 0x06, 0x01, 0x01,verbose=verbose)
-        interface1 = USBIphoneInterface(1, maxusb_app, 0xff, 0xfe, 0x02,verbose=verbose)
-        interface2 = USBIphoneInterface(2, maxusb_app, 0xff, 0xfd, 0x01,verbose=verbose)
+        interface0 = USBIphoneInterface(0, app, 0x06, 0x01, 0x01,verbose=verbose)
+        interface1 = USBIphoneInterface(1, app, 0xff, 0xfe, 0x02,verbose=verbose)
+        interface2 = USBIphoneInterface(2, app, 0xff, 0xfd, 0x01,verbose=verbose)
 
 
         config = [
             USBConfiguration(                
-                maxusb_app,
+                app,
                 1,                          # index
                 "iPhone",             # string desc
                 [ interface0, interface1, interface2 ]  # interfaces
             ),
             USBConfiguration(
-                maxusb_app,
+                app,
                 2,                          # index
                 "iPhone",             # string desc
                 [ interface0, interface1, interface2 ]  # interfaces
             ),
             USBConfiguration(
-                maxusb_app,
+                app,
                 3,                          # index
                 "iPhone",             # string desc
                 [ interface0, interface1, interface2 ]  # interfaces
             ),
             USBConfiguration(
-                maxusb_app,
+                app,
                 4,                          # index
                 "iPhone",             # string desc
                 [ interface0, interface1, interface2 ]  # interfaces
@@ -191,7 +191,7 @@ class USBIphoneDevice(USBDevice):
 
         USBDevice.__init__(
                 self,
-                maxusb_app,
+                app,
                 0,                      # 0 device class
 		        0,                      # device subclass
                 0,                      # protocol release number
