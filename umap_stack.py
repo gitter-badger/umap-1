@@ -31,7 +31,7 @@ from devices.USBHub import USBHubDevice
 from devices.USBImage import USBImageDevice
 from devices.USBMassStorage import USBMassStorageDevice
 from devices.USBPrinter import USBPrinterDevice
-
+from devices.USBSmartcard import USBSmartcardDevice
 
 list_cmd = 'umap_stack.py list classes'
 
@@ -114,7 +114,16 @@ class_map = {
             'subclass': 1,
             'proto': 2,
         }
-    }
+    },
+    'smartcard': {
+        'fd_class': USBSmartcardDevice,
+        'classes': [11],
+        'params': {
+            'vid': 0x0bda,
+            'pid': 0x0165,
+            'rev': 0x6123,
+        },
+    },
 }
 
 default_params = {
