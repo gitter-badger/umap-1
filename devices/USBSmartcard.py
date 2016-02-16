@@ -1,97 +1,153 @@
 # USBSmartcard.py
 #
 # Contains class definitions to implement a USB Smartcard.
+#
+# The implementation is based on
+# USB Smart Card Device Class Specification
+# http://www.usb.org/developers/docs/devclass_docs/DWG_Smart-Card_CCID_Rev110.pdf
 
 # This devbice doesn't work properly yet!!!!!
 
+from struct import pack
+from enum import IntEnum
 from USB import *
 from USBDevice import *
 from USBConfiguration import *
 from USBInterface import *
 from USBEndpoint import *
+from .wrappers import mutable
+
+
+class ClassRequests(IntEnum):
+    ABORT = 0x01
+    GET_CLOCK_FREQUENCIES = 0x02
+    GET_DATA_RATES = 0x03
 
 
 class USBSmartcardClass(USBClass):
     name = "USB Smartcard class"
 
     def setup_request_handlers(self):
+        self.local_handlers = {
+            # ClassRequests.ABORT: ('scd_abort_response', self.handle_abort),
+            ClassRequests.GET_CLOCK_FREQUENCIES: ('scd_get_clock_frequencies_response', self.handle_get_clock_frequencies),
+            ClassRequests.GET_DATA_RATES: ('scd_get_data_rates_response', self.handle_get_data_rates),
+        }
         self.request_handlers = {
-            0x02: self.handle_get_clock_frequencies
+            x: self.handle_all for x in self.local_handlers
         }
 
+    def handle_all(self, req):
+        stage, handler = self.local_handlers[req.request]
+        response = self.get_mutation(stage=stage)
+        if response is None:
+            response = handler(req)
+        self.app.send_on_endpoint(0, response)
+        self.supported()
+
     def handle_get_clock_frequencies(self, req):
-        response = b'\x67\x32\x00\x00\xCE\x64\x00\x00\x9D\xC9\x00\x00\x3A\x93\x01\x00\x74\x26\x03\x00\xE7\x4C\x06\x00\xCE\x99\x0C\x00\xD7\x5C\x02\x00\x11\xF0\x03\x00\x34\x43\x00\x00\x69\x86\x00\x00\xD1\x0C\x01\x00\xA2\x19\x02\x00\x45\x33\x04\x00\x8A\x66\x08\x00\x0B\xA0\x02\x00\x73\x30\x00\x00\xE6\x60\x00\x00\xCC\xC1\x00\x00\x99\x83\x01\x00\x32\x07\x03\x00\x63\x0E\x06\x00\xB3\x22\x01\x00\x7F\xE4\x01\x00\x06\x50\x01\x00\x36\x97\x00\x00\x04\xFC\x00\x00\x53\x28\x00\x00\xA5\x50\x00\x00\x4A\xA1\x00\x00\x95\x42\x01\x00\x29\x85\x02\x00\xF8\x78\x00\x00\x3E\x49\x00\x00\x7C\x92\x00\x00\xF8\x24\x01\x00\xF0\x49\x02\x00\xE0\x93\x04\x00\xC0\x27\x09\x00\x74\xB7\x01\x00\x6C\xDC\x02\x00\xD4\x30\x00\x00\xA8\x61\x00\x00\x50\xC3\x00\x00\xA0\x86\x01\x00\x40\x0D\x03\x00\x80\x1A\x06\x00\x48\xE8\x01\x00\xBA\xDB\x00\x00\x36\x6E\x01\x00\x24\xF4\x00\x00\xDD\x6D\x00\x00\x1B\xB7\x00\x00'
-        self.maxusb_app.send_on_endpoint(0, response)
+        response = ''
+        for frequency in interface.clock_frequencies:
+            response += pack('<I', frequency)
+        response = pack('<I', len(response)) + response
+        return response
+
+    def handle_get_data_rates(self, req):
+        response = ''
+        for data_rate in interface.data_rates:
+            response += pack('<I', data_rate)
+        response = pack('<I', len(response)) + response
+        return response
+
+
+def R2P_Parameters(slot, seq, status, error, proto, data):
+    length = len(data)
+    response = pack('<BIBBBBB', RdrToPc.Parameters, length, slot, seq, status, error, proto)
+    response += data
+    return response
+
+
+def R2P_DataBlock(slot, seq, status, error, chain_param, data):
+    length = len(data)
+    response = pack('<BIBBBBBB', RdrToPc.DataBlock, length, slot, seq, status, error, chain_param, proto)
+    response += data
+    return response
+
+
+def R2P_SlotStatus(slot, seq, status, error, clock_status):
+    response = pack('<BIBBBBB', RdrToPc.SlotStatus, 0, slot, seq, status, error, clock_status)
+    return response
+
+
+def R2P_Escape(slot, seq, status, error, data):
+    length = len(data)
+    response = pack('<BIBBBBB', RdrToPc.Escape, length, slot, seq, status, error, 0)
+    response += data
+    return response
+
+
+def R2P_DataRateAndClockFrequency(slot, seq, status, error, freq, rate):
+    data = pack('<II', freq, rate)
+    length = len(data)
+    response = pack('<BIBBBBB', RdrToPc.DataRateAndClock_Frequency, length, slot, seq, status, error, 0)
+    response += data
+    return response
+
+
+class PcToRdrOpcode(IntEnum):
+    IccPowerOn = 0x62
+    IccPowerOff = 0x63
+    GetSlotStatus = 0x65
+    XfrBlock = 0x6F
+    GetParameters = 0x6C
+    ResetParameters = 0x6D
+    SetParameters = 0x61
+    Escape = 0x6B
+    IccClock = 0x6E
+    T0APDU = 0x6A
+    Secure = 0x69
+    Mechanical = 0x71
+    Abort = 0x72
+    SetDataRateAndClock_Frequency = 0x73
+
+
+class RdrToPc(IntEnum):
+    DataBlock = 0x80
+    SlotStatus = 0x81
+    Parameters = 0x82
+    Escape = 0x83
+    DataRateAndClock_Frequency = 0x84
 
 
 class USBSmartcardInterface(USBInterface):
     name = "USB Smartcard interface"
 
     def __init__(self, maxusb_app, verbose=0):
-        bLength = b'\x36'
-        bDescriptorType = b'\x21'   # USB-ICC
-        bcdCCID = b'\x10\x01'
-        bMaxSlotIndex = b'\x00'  # index of highest available slot
-        bVoltageSupport = b'\x07'
-        dwProtocols = b'\x03\x00\x00\x00'
-        dwDefaultClock = b'\xA6\x0E\x00\x00'
-        dwMaximumClock = b'\x4C\x1D\x00\x00'
-        bNumClockSupported = b'\x00'
-        dwDataRate = b'\x60\x27\x00\x00'
-        dwMaxDataRate = b'\xB4\xC4\x04\x00'
-        bNumDataRatesSupported = b'\x00'
-        dwMaxIFSD = b'\xFE\x00\x00\x00'
-        dwSynchProtocols = b'\x00\x00\x00\x00'
-        dwMechanical = b'\x00\x00\x00\x00'
-        dwFeatures = b'\x30\x00\x01\x00'
-        dwMaxCCIDMessageLength = b'\x0F\x01\x00\x00'
-        bClassGetResponse = b'\x00'
-        bClassEnvelope = b'\x00'
-        wLcdLayout = b'\x00\x00'
-        bPinSupport = b'\x00'
-        bMaxCCIDBusySlots = b'\x01'
-
-        self.icc_descriptor = (
-            bLength +
-            bDescriptorType +
-            bcdCCID +
-            bMaxSlotIndex +
-            bVoltageSupport +
-            dwProtocols +
-            dwDefaultClock +
-            dwMaximumClock +
-            bNumClockSupported +
-            dwDataRate +
-            dwMaxDataRate +
-            bNumDataRatesSupported +
-            dwMaxIFSD +
-            dwSynchProtocols +
-            dwMechanical +
-            dwFeatures +
-            dwMaxCCIDMessageLength +
-            bClassGetResponse +
-            bClassEnvelope +
-            wLcdLayout +
-            bPinSupport +
-            bMaxCCIDBusySlots
-        )
-
         descriptors = {
-            USB.desc_type_hid: self.icc_descriptor  # 33 is the same descriptor type code as HID
+            USB.desc_type_hid: self.get_icc_descriptor
         }
 
+        self.clock_frequencies = [
+            0x00003267, 0x000064ce, 0x0000c99d, 0x0001933a, 0x00032674, 0x00064ce7,
+            0x000c99ce, 0x00025cd7, 0x0003f011, 0x00004334, 0x00008669, 0x00010cd1,
+            0x000219a2, 0x00043345, 0x0008668a, 0x0002a00b, 0x00003073, 0x000060e6,
+            0x0000c1cc, 0x00018399, 0x00030732, 0x00060e63, 0x000122b3, 0x0001e47f,
+            0x00015006, 0x00009736, 0x0000fc04, 0x00002853, 0x000050a5, 0x0000a14a,
+            0x00014295, 0x00028529, 0x000078f8, 0x0000493e, 0x0000927c, 0x000124f8,
+            0x000249f0, 0x000493e0, 0x000927c0, 0x0001b774, 0x0002dc6c, 0x000030d4,
+            0x000061a8, 0x0000c350, 0x000186a0, 0x00030d40, 0x00061a80, 0x0001e848,
+            0x0000dbba, 0x00016e36, 0x0000f424, 0x00006ddd, 0x0000b71b
+        ]
+
+        self.data_rates = []
+
+        self.clock_freq = self.clock_frequencies[0]
+        self.data_rate = 0 if not self.data_rates else self.data_rates[0]
+
+        self.cloc
+
         endpoints = [
-            USBEndpoint(
-                maxusb_app=maxusb_app,
-                number=3,
-                direction=USBEndpoint.direction_in,
-                transfer_type=USBEndpoint.transfer_type_interrupt,
-                sync_type=USBEndpoint.sync_type_none,
-                usage_type=USBEndpoint.usage_type_data,
-                max_packet_size=16384,
-                interval=8,
-                handler=self.handle_buffer_available
-            ),
+            # CCID command pipe
             USBEndpoint(
                 maxusb_app=maxusb_app,
                 number=1,
@@ -103,6 +159,7 @@ class USBSmartcardInterface(USBInterface):
                 interval=0,
                 handler=self.handle_data_available
             ),
+            # CCID response pipe
             USBEndpoint(
                 maxusb_app=maxusb_app,
                 number=2,
@@ -113,7 +170,19 @@ class USBSmartcardInterface(USBInterface):
                 max_packet_size=16384,
                 interval=0,
                 handler=None
-            )
+            ),
+            # CCID event notification pipe
+            USBEndpoint(
+                maxusb_app=maxusb_app,
+                number=3,
+                direction=USBEndpoint.direction_in,
+                transfer_type=USBEndpoint.transfer_type_interrupt,
+                sync_type=USBEndpoint.sync_type_none,
+                usage_type=USBEndpoint.usage_type_data,
+                max_packet_size=16384,
+                interval=8,
+                handler=self.handle_buffer_available
+            ),
         ]
 
         # TODO: un-hardcode string index (last arg before "verbose")
@@ -131,19 +200,271 @@ class USBSmartcardInterface(USBInterface):
         )
 
         self.device_class = USBSmartcardClass(maxusb_app)
+        self.device_class.interface = self
         self.trigger = False
         self.initial_data = b'\x50\x03'
+        self.proto = 0
+        self.abProtocolDataStructure = b'\x11\x00\x00\x0a\x00'
+        self.clock_status = 0x00
+
+        self.operations = {
+            PcToRdr.IccPowerOn: self.handle_PcToRdr_IccPowerOn,
+            PcToRdr.IccPowerOff: self.handle_PcToRdr_IccPowerOff,
+            PcToRdr.GetSlotStatus: self.handle_PcToRdr_GetSlotStatus,
+            PcToRdr.XfrBlock: self.handle_PcToRdr_XfrBlock,
+            PcToRdr.GetParameters: self.handle_PcToRdr_GetParameters,
+            PcToRdr.ResetParameters: self.handle_PcToRdr_ResetParameters,
+            PcToRdr.SetParameters: self.handle_PcToRdr_SetParameters,
+            PcToRdr.Escape: self.handle_PcToRdr_Escape,
+            PcToRdr.IccClock: self.handle_PcToRdr_IccClock,
+            PcToRdr.T0APDU: self.handle_PcToRdr_T0APDU,
+            PcToRdr.Secure: self.handle_PcToRdr_Secure,
+            PcToRdr.Mechanical: self.handle_PcToRdr_Mechanical,
+            PcToRdr.Abort: self.handle_PcToRdr_Abort,
+            PcToRdr.SetDataRateAndClock_Frequency: self.handle_PcToRdr_SetDataRateAndClock_Frequency,
+        }
+
+    @mutable('IccPowerOn_response')
+    def handle_PcToRdr_IccPowerOn(self, slot, seq, data):
+        voltage = data[7]
+        if voltage == 2:
+            abData = b'\x3b\x6e\x00\x00\x80\x31\x80\x66\xb0\x84\x12\x01\x6e\x01\x83\x00\x90\x00'
+            return R2P_DataBlock(
+                slot=slot,
+                seq=seq,
+                status=0x00,
+                error=0x80,
+                chain_param=0x00,
+                data=abData
+            )
+        else:
+            return R2P_DataBlock(
+                slot=slot,
+                seq=seq,
+                status=0x40,
+                error=0xfe,
+                chain_param=0x00,
+                data=b''
+            )
+
+    @mutable('IccPowerOff_response')
+    def handle_PcToRdr_IccPowerOff(self, slot, seq, data):
+        '''
+        Check out slot number (should be as bulk OUT message)
+        '''
+        return R2P_SlotStatus(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            clock_status=self.clock_status
+        )
+
+    @mutable('GetSlotStatus_response')
+    def handle_PcToRdr_GetSlotStatus(self, slot, seq, data):
+        return R2P_SlotStatus(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            clock_status=self.clock_status
+        )
+
+    @mutable('XfrBlock_response')
+    def handle_PcToRdr_XfrBlock(self, slot, seq, data):
+        '''
+        .. todo:: check the response again later,
+        '''
+        abData = b'\x6a\x82'
+        return R2P_DataBlock(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            chain_param=0x00,
+            data=abData
+        )
+
+    @mutable('GetParameters_response')
+    def handle_PcToRdr_GetParameters(self, slot, seq, data):
+        return R2P_Parameters(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            proto=self.proto,
+            data=self.abProtocolDataStructure
+        )
+
+    @mutable('ResetParameters_response')
+    def handle_PcToRdr_ResetParameters(self, slot, seq, data):
+        return R2P_Parameters(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            proto=self.proto,
+            data=self.abProtocolDataStructure
+        )
+
+    @mutable('SetParameters_response')
+    def handle_PcToRdr_SetParameters(self, slot, seq, data):
+        self.proto = data[7]
+        if self.proto == 0:
+            self.abProtocolDataStructure = data[10:15]
+        elif self.proto == 1:
+            self.abProtocolDataStructure = data[10:17]
+        return R2P_Parameters(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            proto=self.proto,
+            data=self.abProtocolDataStructure
+        )
+
+    @mutable('Escape_response')
+    def handle_PcToRdr_Escape(self, slot, seq, data):
+        '''
+        .. todo:: should check the data parameter
+        '''
+        return R2P_Escape(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            data=b''
+        )
+
+    @mutable('IccClock_response')
+    def handle_PcToRdr_IccClock(self, slot, seq, data):
+        # bClockCommand = data[7]
+        return R2P_SlotStatus(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            clock_status=self.clock_status
+        )
+
+    @mutable('T0APDU_response')
+    def handle_PcToRdr_T0APDU(self, slot, seq, data):
+        # bmChange, bClassGetResponse, bClassEnvelope = unpack('<BBB', data[7:10])
+        return R2P_SlotStatus(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            clock_status=self.clock_status
+        )
+
+    @mutable('Secure_response')
+    def handle_PcToRdr_Secure(self, slot, seq, data):
+        '''
+        .. todo:: to complete that, go over section 6.1.11
+        '''
+        bBWI, wLevelParameter = unpack('<BH')
+        return R2P_DataBlock(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            chain_param=0x00,
+            data=b''
+        )
+
+    @mutable('Mechanical_response')
+    def handle_PcToRdr_Mechanical(self, slot, seq, data):
+        '''
+        .. todo:: handling
+        '''
+        return R2P_SlotStatus(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            clock_status=self.clock_status
+        )
+
+    @mutable('Abort_response')
+    def handle_PcToRdr_Abort(self, slot, seq, data):
+        '''
+        .. todo:: handling
+        '''
+        return R2P_SlotStatus(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            clock_status=self.clock_status
+        )
+
+    @mutable('SetDataRateAndClock_Frequency_response')
+    def handle_PcToRdr_SetDataRateAndClock_Frequency(self, slot, seq, data):
+        self.clock_freq, self.data_rate = unpack('<II', data[10:18])
+        return R2P_DataRateAndClockFrequency(
+            slot=slot,
+            seq=seq,
+            status=0x00,
+            error=0x80,
+            freq=self.clock_freq,
+            rate=self.data_rate
+        )
+
+    @mutable('scd_icc_descriptor')
+    def get_icc_descriptor(self, *args):
+        bDescriptorType = 0x21
+        bcdCCID = 0x0110
+        bMaxSlotIndex = 0x00
+        bVoltageSupport = 0x07
+        dwProtocols = 0x00000003
+        dwDefaultClock = 0x00000ea6
+        dwMaximumClock = 0x00001d4c
+        bNumClockSupported = len(self.clock_frequencies)
+        dwDataRate = 0x00002760
+        dwMaxDataRate = 0x0004c4b4
+        bNumDataRatesSupported = len(self.data_rates)
+        dwMaxIFSD = 0x000000fe
+        dwSynchProtocols = 0x00000000
+        dwMechanical = 0x00000000
+        dwFeatures = 0x00010030
+        dwMaxCCIDMessageLength = 0x0000010f
+        bClassGetResponse = 0x00
+        bClassEnvelope = 0x00
+        wLcdLayout = 0x0000
+        bPinSupport = 0x00
+        bMaxCCIDBusySlots = 0x01
+
+        response = pack(
+            '<BHBBIIIBIIBIIIIIBBHBB',
+            bDescriptorType,
+            bcdCCID,
+            bMaxSlotIndex,
+            bVoltageSupport,
+            dwProtocols,
+            dwDefaultClock,
+            dwMaximumClock,
+            bNumClockSupported,
+            dwDataRate,
+            dwMaxDataRate,
+            bNumDataRatesSupported,
+            dwMaxIFSD,
+            dwSynchProtocols,
+            dwMechanical,
+            dwFeatures,
+            dwMaxCCIDMessageLength,
+            bClassGetResponse,
+            bClassEnvelope,
+            wLcdLayout,
+            bPinSupport,
+            bMaxCCIDBusySlots
+        )
+
+        response = pack('B', len(response)) + response
 
     def handle_data_available(self, data):
         self.supported()
-#        print ("Received:",data)
-        command = ord(data[:1])
-#        print ("command=%02x" % command)
-        bSeq = data[6:7]
-#        print ("seq=",ord(bSeq))
-        bReserved = ord(data[7:8])
-#        print ("bReserved=",bReserved) 
-
+        opcode, length, slot, seq = unpack('<BIBB', data[:7])
         if self.maxusb_app.server_running:
             try:
                 self.maxusb_app.netserver_from_endpoint_sd.send(data)
@@ -155,276 +476,14 @@ class USBSmartcardInterface(USBInterface):
                     self.maxusb_app.send_on_endpoint(2, self.maxusb_app.reply_buffer)
                     self.maxusb_app.reply_buffer = ""
                     break
-
-        elif command == 0x61: # PC_to_RDR_SetParameters
-
-            if self.maxusb_app.testcase[1] == "SetParameters_bMessageType":
-                bMessageType = self.maxusb_app.testcase[2]
-            else:
-                bMessageType = b'\x82'  # RDR_to_PC_Parameters
-            if self.maxusb_app.testcase[1] == "SetParameters_dwLength":
-                dwLength = self.maxusb_app.testcase[2]
-            else:
-                dwLength = b'\x05\x00\x00\x00' # Message-specific data length
-            if self.maxusb_app.testcase[1] == "SetParameters_bSlot":
-                bSlot = self.maxusb_app.testcase[2]
-            else:
-                bSlot = b'\x00' # fixed for legacy reasons
-            if self.maxusb_app.testcase[1] == "SetParameters_bStatus":
-                bStatus = self.maxusb_app.testcase[2]
-            else:
-                bStatus = b'\x00' # reserved
-            if self.maxusb_app.testcase[1] == "SetParameters_bError":
-                bError = self.maxusb_app.testcase[2]
-            else:
-                bError = b'\x80'
-            if self.maxusb_app.testcase[1] == "SetParameters_bProtocolNum":
-                bProtocolNum = self.maxusb_app.testcase[2]
-            else:
-                bProtocolNum = b'\x00'
-
-            abProtocolDataStructure = b'\x11\x00\x00\x0a\x00'
-            
-            response =  bMessageType + \
-                        dwLength + \
-                        bSlot + \
-                        bSeq + \
-                        bStatus + \
-                        bError + \
-                        bProtocolNum + \
-                        abProtocolDataStructure      
-
- 
-        elif command == 0x62: # PC_to_RDR_IccPowerOn
-
-            if bReserved == 2:
-
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bMessageType":
-                    bMessageType = self.maxusb_app.testcase[2]
-                else:
-                    bMessageType = b'\x80'  # RDR_to_PC_DataBlock
-                if self.maxusb_app.testcase[1] == "IccPowerOn_dwLength":
-                    dwLength = self.maxusb_app.testcase[2]
-                else:
-                    dwLength = b'\x12\x00\x00\x00' # Message-specific data length
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bSlot":
-                    bSlot = self.maxusb_app.testcase[2]
-                else:
-                    bSlot = b'\x00' # fixed for legacy reasons
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bStatus":
-                    bStatus = self.maxusb_app.testcase[2]
-                else:
-                    bStatus = b'\x00'
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bError":
-                    bError = self.maxusb_app.testcase[2]
-                else:
-                    bError = b'\x80'
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bChainParameter":
-                    bChainParameter = self.maxusb_app.testcase[2]
-                else:
-                    bChainParameter = b'\x00'
-                abData = b'\x3b\x6e\x00\x00\x80\x31\x80\x66\xb0\x84\x12\x01\x6e\x01\x83\x00\x90\x00'
-                response =  bMessageType + \
-                            dwLength + \
-                            bSlot + \
-                            bSeq + \
-                            bStatus + \
-                            bError + \
-                            bChainParameter + \
-                            abData
-
-            else:
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bMessageType":
-                    bMessageType = self.maxusb_app.testcase[2]
-                else:
-                    bMessageType = b'\x80'  # RDR_to_PC_DataBlock
-                if self.maxusb_app.testcase[1] == "IccPowerOn_dwLength":
-                    dwLength = self.maxusb_app.testcase[2]
-                else:
-                    dwLength = b'\x00\x00\x00\x00' # Message-specific data length
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bSlot":
-                    bSlot = self.maxusb_app.testcase[2]
-                else:
-                    bSlot = b'\x00' # fixed for legacy reasons
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bStatus":
-                    bStatus = self.maxusb_app.testcase[2]
-                else:
-                    bStatus = b'\x40'
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bError":
-                    bError = self.maxusb_app.testcase[2]
-                else:
-                    bError = b'\xfe'
-                if self.maxusb_app.testcase[1] == "IccPowerOn_bChainParameter":
-                    bChainParameter = self.maxusb_app.testcase[2]
-                else:
-                    bChainParameter = b'\x00'
-
-                response =  bMessageType + \
-                            dwLength + \
-                            bSlot + \
-                            bSeq + \
-                            bStatus + \
-                            bError + \
-                            bChainParameter
-
-
-
-        elif command == 0x63: # PC_to_RDR_IccPowerOff
-
-            if self.maxusb_app.testcase[1] == "IccPowerOff_bMessageType":
-                bMessageType = self.maxusb_app.testcase[2]
-            else:
-                bMessageType = b'\x81'  # PC_to_RDR_IccPowerOff
-            if self.maxusb_app.testcase[1] == "IccPowerOff_dwLength":
-                dwLength = self.maxusb_app.testcase[2]
-            else:
-                dwLength = b'\x00\x00\x00\x00' # Message-specific data length
-            if self.maxusb_app.testcase[1] == "IccPowerOff_bSlot":
-                bSlot = self.maxusb_app.testcase[2]
-            else:
-                bSlot = b'\x00' # fixed for legacy reasons
-            if self.maxusb_app.testcase[1] == "IccPowerOff_abRFU":
-                abRFU = self.maxusb_app.testcase[2]            
-            else:
-                abRFU = b'\x01' # reserved
-
-            response =  bMessageType + \
-                        dwLength + \
-                        bSlot + \
-                        bSeq + \
-                        abRFU
-
-
-        elif command == 0x65: # PC_to_RDR_GetSlotStatus
-
-
-            bMessageType = b'\x81'  # RDR_to_PC_SlotStatus
-            dwLength = b'\x00\x00\x00\x00' # Message-specific data length
-            bSlot = b'\x00'
-            bStatus = b'\x01'
-            bError = b'\x00'
-            bClockStatus = b'\x00' # reserved
-
-            response =  bMessageType + \
-                        dwLength + \
-                        bSlot + \
-                        bSeq + \
-                        bStatus + \
-                        bError + \
-                        bClockStatus
-
-
-
-
-                    
-
-        elif command == 0x6b: # PC_to_RDR_Escape
-
-           
-            bMessageType = b'\x83'  # RDR_to_PC_Escape
-            dwLength = b'\x00\x00\x00\x00' # Message-specific data length
-            bSlot = b'\x00'
-            bStatus = b'\x41'
-            bError = b'\x0a'
-            bRFU = b'\x00' # reserved
-
-            response =  bMessageType + \
-                        dwLength + \
-                        bSlot + \
-                        bSeq + \
-                        bStatus + \
-                        bError + \
-                        bRFU
-
-
-        elif command == 0x6f: # PC_to_RDR_XfrBlock message
-
-            if self.maxusb_app.testcase[1] == "XfrBlock_bMessageType":
-                bMessageType = self.maxusb_app.testcase[2]
-            else:
-                bMessageType = b'\x80'  # RDR_to_PC_DataBlock
-            if self.maxusb_app.testcase[1] == "XfrBlock_dwLength":
-                dwLength = self.maxusb_app.testcase[2]
-            else:
-                dwLength = b'\x02\x00\x00\x00' # Message-specific data length
-            if self.maxusb_app.testcase[1] == "XfrBlock_bSlot":
-                bSlot = self.maxusb_app.testcase[2]
-            else:
-                bSlot = b'\x00' # fixed for legacy reasons
-            if self.maxusb_app.testcase[1] == "XfrBlock_bStatus":
-                bStatus = self.maxusb_app.testcase[2]
-            else:
-                bStatus = b'\x00' # reserved
-            if self.maxusb_app.testcase[1] == "XfrBlock_bError":
-                bError = self.maxusb_app.testcase[2]
-            else:
-                bError = b'\x80'
-            if self.maxusb_app.testcase[1] == "XfrBlock_bChainParameter":
-                bChainParameter = self.maxusb_app.testcase[2]
-            else:
-                bChainParameter = b'\x00'
-            abData = b'\x6a\x82' 
-
-            response =  bMessageType + \
-                        dwLength + \
-                        bSlot + \
-                        bSeq + \
-                        bStatus + \
-                        bError + \
-                        bChainParameter + \
-                        abData
-
-        elif command == 0x73: # PC_to_RDR_SetDataRateAndClockFrequency
-
-            if self.maxusb_app.testcase[1] == "SetDataRateAndClockFrequency_bMessageType":
-                bMessageType = self.maxusb_app.testcase[2]
-            else:
-                bMessageType = b'\x84'  # RDR_to_PC_DataRateAndClockFrequency
-            if self.maxusb_app.testcase[1] == "SetDataRateAndClockFrequency_dwLength":
-                dwLength = self.maxusb_app.testcase[2]
-            else:
-                dwLength = b'\x08\x00\x00\x00' # Message-specific data length
-            if self.maxusb_app.testcase[1] == "SetDataRateAndClockFrequency_bSlot":
-                bSlot = self.maxusb_app.testcase[2]
-            else:
-                bSlot = b'\x00' # fixed for legacy reasons
-            if self.maxusb_app.testcase[1] == "SetDataRateAndClockFrequency_bStatus":
-                bStatus = self.maxusb_app.testcase[2]
-            else:
-                bStatus = b'\x00' # reserved
-            if self.maxusb_app.testcase[1] == "SetDataRateAndClockFrequency_bError":
-                bError = self.maxusb_app.testcase[2]
-            else:
-                bError = b'\x80'
-            if self.maxusb_app.testcase[1] == "SetDataRateAndClockFrequency_bRFU":
-                bRFU = self.maxusb_app.testcase[2]
-            else:
-                bRFU = b'\x80'
-            if self.maxusb_app.testcase[1] == "SetDataRateAndClockFrequency_dwClockFrequency":
-                dwClockFrequency = self.maxusb_app.testcase[2]
-            else:
-                dwClockFrequency = b'\xA6\x0E\x00\x00'
-
-            if self.maxusb_app.testcase[1] == "SetDataRateAndClockFrequency_dwDataRate":
-                dwDataRate = self.maxusb_app.testcase[2]
-            else:
-                dwDataRate = b'\x60\x27\x00\x00' 
-
-            response =  bMessageType + \
-                        dwLength + \
-                        bSlot + \
-                        bSeq + \
-                        bStatus + \
-                        bError + \
-                        bRFU + \
-                        dwClockFrequency + \
-                        dwDataRate
-
+        if opcode in self.operations:
+            handler = self.operations[opcode]
+            response = handler(slot, seq, data)
         else:
-            print ("Received Smartcard command not understood") 
+            print("Received Smartcard command not understood")
             response = b''
 
-        if not self.maxusb_app.server_running:
+        if response and not self.maxusb_app.server_running:
             self.configuration.device.maxusb_app.send_on_endpoint(2, response)
 
     def handle_buffer_available(self):
@@ -440,10 +499,10 @@ class USBSmartcardDevice(USBDevice):
         interface = USBSmartcardInterface(maxusb_app, verbose=verbose)
 
         config = USBConfiguration(
-                maxusb_app=maxusb_app,
-                configuration_index=1,
-                configuration_string="Emulated Smartcard",
-                interfaces=[interface]
+            maxusb_app=maxusb_app,
+            configuration_index=1,
+            configuration_string="Emulated Smartcard",
+            interfaces=[interface]
         )
 
         super(USBSmartcardDevice, self).__init__(
