@@ -6,6 +6,7 @@ import sys
 from USB import *
 from USBClass import *
 import traceback
+from struct import pack, unpack
 
 
 class USBDevice:
@@ -336,7 +337,7 @@ class USBDevice:
                     % (dtype, dindex, lang, n))
 
         response = self.descriptors.get(dtype, None)
-        #print ("desc:", self.descriptors)
+        # print ("desc:", self.descriptors)
         if callable(response):
             response = response(dindex)
 
@@ -498,11 +499,11 @@ class USBDeviceRequest:
     def __init__(self, raw_bytes):
         """Expects raw 8-byte setup data request packet"""
 
-        self.request_type   = raw_bytes[0]
-        self.request        = raw_bytes[1]
-        self.value          = (raw_bytes[3] << 8) | raw_bytes[2]
-        self.index          = (raw_bytes[5] << 8) | raw_bytes[4]
-        self.length         = (raw_bytes[7] << 8) | raw_bytes[6]
+        self.request_type = raw_bytes[0]
+        self.request = raw_bytes[1]
+        self.value, self.index, self.length = unpack('<HHH', raw_bytes[2:8])
+        self.data = raw_bytes[8:]
+        self.raw_bytes = raw_bytes
 
     def __str__(self):
         s = "dir=%d, type=%d, rec=%d, r=%d, v=%d, i=%d, l=%d" \

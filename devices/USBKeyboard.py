@@ -7,7 +7,19 @@ from USBDevice import *
 from USBConfiguration import *
 from USBInterface import *
 from USBEndpoint import *
+import binascii
 from .wrappers import mutable
+from enum import IntEnum
+from struct import pack
+
+
+class Requests(IntEnum):
+    GET_REPORT = 0x01  # Mandatory
+    GET_IDLE = 0x02
+    GET_PROTOCOL = 0x03  # Ignored - only for boot device
+    SET_REPORT = 0x09
+    SET_IDLE = 0x0A
+    SET_PROTOCOL = 0x0B  # Ignored - only for boot device
 
 
 class USBKeyboardClass(USBClass):
@@ -15,9 +27,10 @@ class USBKeyboardClass(USBClass):
 
     def setup_request_handlers(self):
         self.local_handlers = {
-            0x01: ('hid_set_idle', self.handle_get_report),
-            0x09: ('hid_get_report', self.handle_set_report),
-            0x0a: ('hid_set_report', self.handle_set_idle)
+            Requests.GET_REPORT: ('hid_get_report', self.handle_get_report),
+            Requests.GET_IDLE: ('hid_get_idle', self.handle_get_idle),
+            Requests.SET_REPORT: ('hid_set_report', self.handle_set_report),
+            Requests.SET_IDLE: ('hid_set_idle', self.handle_set_idle),
         }
         self.request_handlers = {
             x: self.handle_all for x in self.local_handlers
@@ -31,13 +44,17 @@ class USBKeyboardClass(USBClass):
         self.app.send_on_endpoint(0, response)
         self.supported()
 
-    def handle_set_idle(self, req):
-        return b''
-
     def handle_get_report(self, req):
+        response = b'\xff' * req.length
+        return response
+
+    def handle_get_idle(self, req):
         return b''
 
     def handle_set_report(self, req):
+        return b''
+
+    def handle_set_idle(self, req):
         return b''
 
 
@@ -52,7 +69,7 @@ class USBKeyboardInterface(USBInterface):
 
         endpoint = USBEndpoint(
             app=app,
-            number=3,
+            number=2,
             direction=USBEndpoint.direction_in,
             transfer_type=USBEndpoint.transfer_type_interrupt,
             sync_type=USBEndpoint.sync_type_none,
@@ -79,8 +96,8 @@ class USBKeyboardInterface(USBInterface):
         self.device_class = USBKeyboardClass(app, verbose)
 
         empty_preamble = [0x00] * 10
-        # text = [0x0f, 0x00, 0x16, 0x00, 0x28, 0x00]
-        text = []
+        text = [0x0f, 0x00, 0x16, 0x00, 0x28, 0x00]
+        # text = []
 
         self.keys = [chr(x) for x in empty_preamble + text]
 
@@ -93,9 +110,7 @@ class USBKeyboardInterface(USBInterface):
         bNumDescriptors = b'\x01'
         bDescriptorType2 = b'\x22'  # REPORT
         desclen = len(report_descriptor)
-        wDescriptorLength = bytes([
-            desclen & 0xff,
-            (desclen >> 8) & 0xff])
+        wDescriptorLength = pack('<H', desclen)
         hid_descriptor = (
             bDescriptorType +
             bcdHID +
@@ -161,11 +176,10 @@ class USBKeyboardInterface(USBInterface):
         return report_descriptor
 
     def handle_buffer_available(self):
+        self.supported()
         if self.keys:
             letter = self.keys.pop(0)
             self.type_letter(letter)
-        else:
-            self.supported()
 
     def type_letter(self, letter, modifiers=0):
         data = bytes([0, 0, ord(letter)])
@@ -173,7 +187,7 @@ class USBKeyboardInterface(USBInterface):
         if self.verbose > 4:
             print(self.name, "sending keypress 0x%02x" % ord(letter))
 
-        self.configuration.device.app.send_on_endpoint(3, data)
+        self.configuration.device.app.send_on_endpoint(2, data)
 
 
 class USBKeyboardDevice(USBDevice):

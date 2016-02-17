@@ -66,9 +66,11 @@ class USBMassStorageClass(USBClass):
         }
 
     def handle_bulk_only_mass_storage_reset_request(self, req):
+        print('handle_bulk_only_mass_storage_reset_request')
         self.interface.configuration.device.app.send_on_endpoint(0, b'')
 
     def handle_get_max_lun_request(self, req):
+        print('handle_get_max_lun_request')
         self.interface.configuration.device.app.send_on_endpoint(0, b'\x00')
 
 
@@ -96,7 +98,7 @@ class USBMassStorageInterface(USBInterface):
             ),
             USBEndpoint(
                 app=app,
-                number=3,
+                number=2,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_bulk,
                 sync_type=USBEndpoint.sync_type_none,
@@ -139,13 +141,13 @@ class USBMassStorageInterface(USBInterface):
             ScsiCmds.REQUEST_SENSE: self.handle_request_sense,
             ScsiCmds.TEST_UNIT_READY: self.handle_test_unit_ready,
             ScsiCmds.READ_CAPACITY_10: self.handle_read_capacity_10,
-            ScsiCmds.SEND_DIAGNOSTIC: self.handle_send_diagnostic,
+            # ScsiCmds.SEND_DIAGNOSTIC: self.handle_send_diagnostic,
             ScsiCmds.PREVENT_ALLOW_MEDIUM_REMOVAL: self.handle_prevent_allow_medium_removal,
             ScsiCmds.WRITE_10: self.handle_write_10,
             ScsiCmds.READ_10: self.handle_read_10,
-            ScsiCmds.WRITE_6: self.handle_write_6,
-            ScsiCmds.READ_6: self.handle_read_6,
-            ScsiCmds.VERIFY_10: self.handle_verify_10,
+            # ScsiCmds.WRITE_6: self.handle_write_6,
+            # ScsiCmds.READ_6: self.handle_read_6,
+            # ScsiCmds.VERIFY_10: self.handle_verify_10,
             ScsiCmds.MODE_SENSE_6: self.handle_mode_sense_6,
             ScsiCmds.MODE_SENSE_10: self.handle_mode_sense_10,
             ScsiCmds.READ_FORMAT_CAPACITIES: self.handle_read_format_capacities,
