@@ -91,6 +91,3 @@ class USBEndpoint(USBBaseActor):
             self.interval
         )
         return d
-
-    def get_mutation(self, stage, data=None):
-        return self.app.get_mutation(stage, data)

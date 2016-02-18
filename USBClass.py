@@ -23,14 +23,3 @@ class USBClass(USBBaseActor):
     def setup_request_handlers(self):
         """To be overridden for subclasses to modify self.class_request_handlers"""
         pass
-
-    def supported(self):
-        '''
-        Mark current USB class as supported by the host.
-        This will tell the application to stop emulating current device.
-        '''
-        if self.app.mode == 1:
-            print (' **SUPPORTED**')
-            if self.app.fplog:
-                self.app.fplog.write(" **SUPPORTED**\n")
-            self.app.stop = True
