@@ -7,6 +7,7 @@ from Facedancer import *
 from USB import *
 from USBDevice import USBDeviceRequest
 import sys
+import traceback
 
 
 class MAXUSBApp(FacedancerApp):
@@ -111,7 +112,6 @@ class MAXUSBApp(FacedancerApp):
         self.write_register_cmd.data = bytearray([(reg_num << 3) | 2, value])
         if ack:
             self.write_register_cmd.data[0] |= 1
-
         self.device.writecmd(self.write_register_cmd)
         self.device.readcmd()
 
@@ -121,15 +121,12 @@ class MAXUSBApp(FacedancerApp):
     def ack_status_stage(self):
         if self.verbose > 5:
             print(self.app_name, "sending ack!")
-
         self.device.writecmd(self.ack_cmd)
         self.device.readcmd()
 
     def connect(self, usb_device):
         self.write_register(self.reg_usb_control, self.usb_control_vbgate | self.usb_control_connect)
-
         self.connected_device = usb_device
-
         if self.verbose > 0:
             print(self.app_name, "connected device", self.connected_device.name)
 
@@ -220,28 +217,27 @@ class MAXUSBApp(FacedancerApp):
         count = 0
         tmp_irq = 0
 
-        while self.stop == False:
+        while not self.stop:
             irq = self.read_register(self.reg_endpoint_irq)
 
             if irq == tmp_irq:
-                count +=1
+                count += 1
             else:
                 count = 0
 
-            if count == 10000 and self.mode == 2:     #This needs to be configurable
+            if count == 10000 and self.mode == 2:  # This needs to be configurable
                 self.stop = True
                 if self.fplog:
                     self.fplog.write("\n")
                 return
 
-            if count == 2000 and (self.mode == 3 or self.mode == 1 or self.mode == 4):		#This needs to be configurable
+            if count == 2000 and (self.mode == 3 or self.mode == 1 or self.mode == 4):  # This needs to be configurable
                 self.stop = True
 
                 if len(self.fingerprint) == 0:
                     print ("\n*** No response from host - check if the host is still functioning correctly ***\n")
                     self.disconnect()
                     sys.exit()
-
 
                 self.disconnect()
 
@@ -254,8 +250,11 @@ class MAXUSBApp(FacedancerApp):
                 print(self.app_name, "read endpoint irq: 0x%02x" % irq)
 
             if self.verbose > 2:
-                if irq & ~ (self.is_in0_buffer_avail \
-                        | self.is_in2_buffer_avail | self.is_in3_buffer_avail):
+                if irq & ~ (
+                    self.is_in0_buffer_avail |
+                    self.is_in2_buffer_avail |
+                    self.is_in3_buffer_avail
+                ):
                     print(self.app_name, "notable irq: 0x%02x" % irq)
 
             if irq & self.is_setup_data_avail:
@@ -275,12 +274,16 @@ class MAXUSBApp(FacedancerApp):
                 try:
                     self.connected_device.handle_buffer_available(2)
                 except:
+                    traceback.print_exc()
+                    print('umap ignored the exception for some reason... will need to address that later on')
                     pass
 
             if irq & self.is_in3_buffer_avail:
                 try:
                     self.connected_device.handle_buffer_available(3)
                 except:
+                    traceback.print_exc()
+                    print('umap ignored the exception for some reason... will need to address that later on')
                     pass
             tmp_irq = irq
         self.disconnect()
