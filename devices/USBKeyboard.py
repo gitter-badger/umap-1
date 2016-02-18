@@ -7,7 +7,6 @@ from USBDevice import *
 from USBConfiguration import *
 from USBInterface import *
 from USBEndpoint import *
-import binascii
 from .wrappers import mutable
 from enum import IntEnum
 from struct import pack
@@ -37,15 +36,17 @@ class USBKeyboardClass(USBClass):
         }
 
     def handle_all(self, req):
+        print('[*] in handle all')
         stage, handler = self.local_handlers[req.request]
         response = self.get_mutation(stage=stage)
         if response is None:
             response = handler(req)
         self.app.send_on_endpoint(0, response)
-        self.supported()
+        # self.supported()
 
     def handle_get_report(self, req):
-        response = b'\xff' * req.length
+        # response = b'\xff' * req.length
+        response = b''
         return response
 
     def handle_get_idle(self, req):
@@ -69,12 +70,12 @@ class USBKeyboardInterface(USBInterface):
 
         endpoint = USBEndpoint(
             app=app,
-            number=2,
+            number=3,
             direction=USBEndpoint.direction_in,
             transfer_type=USBEndpoint.transfer_type_interrupt,
             sync_type=USBEndpoint.sync_type_none,
             usage_type=USBEndpoint.usage_type_data,
-            max_packet_size=16384,
+            max_packet_size=0x40,
             interval=10,
             handler=self.handle_buffer_available
         )
@@ -94,6 +95,7 @@ class USBKeyboardInterface(USBInterface):
         )
 
         self.device_class = USBKeyboardClass(app, verbose)
+        self.device_class.set_interface(self)
 
         empty_preamble = [0x00] * 10
         text = [0x0f, 0x00, 0x16, 0x00, 0x28, 0x00]
@@ -184,10 +186,10 @@ class USBKeyboardInterface(USBInterface):
     def type_letter(self, letter, modifiers=0):
         data = bytes([0, 0, ord(letter)])
 
-        if self.verbose > 4:
+        if self.verbose > 2:
             print(self.name, "sending keypress 0x%02x" % ord(letter))
 
-        self.configuration.device.app.send_on_endpoint(2, data)
+        self.configuration.device.app.send_on_endpoint(3, data)
 
 
 class USBKeyboardDevice(USBDevice):

@@ -2,12 +2,14 @@
 #
 # Contains class definition for USBCSEndpoint.
 from struct import pack, unpack
+from USBBase import USBBaseActor
+from devices.wrappers import mutable
 
 
-class USBCSEndpoint:
+class USBCSEndpoint(USBBaseActor):
 
-    def __init__(self, app, cs_config):
-        self.app = app
+    def __init__(self, app, cs_config, verbose=0):
+        super().__init__(app, verbose)
         self.cs_config = cs_config
         self.number = self.cs_config[1]
         self.interface = None
@@ -26,6 +28,7 @@ class USBCSEndpoint:
         self.interface = interface
 
     # see Table 9-13 of USB 2.0 spec (pdf page 297)
+    @mutable('usbcsendpoint_descriptor')
     def get_descriptor(self):
         if self.cs_config[0] == 0x01:  # EP_GENERAL
             bLength = 7

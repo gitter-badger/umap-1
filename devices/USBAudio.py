@@ -256,13 +256,6 @@ class USBAudioDevice(USBDevice):
         interface2 = USBAudioInterface(2, app, 0x01, 0x02, 0x00, verbose=verbose)
         interface3 = USBAudioInterface(3, app, 0x03, 0x00, 0x00, verbose=verbose)
 
-        if vid == 0x1111:
-            vid = 0x041e
-        if pid == 0x2222:
-            pid = 0x0402
-        if rev == 0x3333:
-            rev = 0x0100
-
         config = USBConfiguration(
             app=app,
             configuration_index=1,

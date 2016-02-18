@@ -86,9 +86,9 @@ class_map = {
         'fd_class': USBKeyboardDevice,
         'classes': [3],
         'params': {
-            'vid': 0x413c,
-            'pid': 0x2107,
-            'rev': 0x0178,
+            'vid': 0x610b,  # 0x413c,
+            'pid': 0x4653,  # 0x2107,
+            'rev': 0x3412,  # 0x0178,
         },
     },
     'mass-storage': {

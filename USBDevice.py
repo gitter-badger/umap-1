@@ -2,14 +2,15 @@
 #
 # Contains class definitions for USBDevice and USBDeviceRequest.
 
-import sys
+import traceback
+from struct import unpack
 from USB import *
 from USBClass import *
-import traceback
-from struct import pack, unpack
+from USBBase import USBBaseActor
+from devices.wrappers import mutable
 
 
-class USBDevice:
+class USBDevice(USBBaseActor):
     name = "generic device"
 
     def __init__(
@@ -18,9 +19,7 @@ class USBDevice:
             device_rev, manufacturer_string, product_string,
             serial_number_string, configurations=[], descriptors={},
             verbose=0):
-        self.app = app
-        self.verbose = verbose
-
+        super().__init__(app, verbose)
         self.supported_device_class_trigger = False
         self.supported_device_class_count = 0
 
@@ -70,7 +69,6 @@ class USBDevice:
             # string descriptors start at index 1
             self.strings.append(s)
             i = len(self.strings)
-
         return i
 
     def setup_request_handlers(self):
@@ -113,6 +111,7 @@ class USBDevice:
     def ack_status_stage(self):
         self.app.ack_status_stage()
 
+    @mutable('device_descriptor')
     def get_descriptor(self, n):
 
         bLength = 18
@@ -144,7 +143,7 @@ class USBDevice:
 
     # IRQ handlers
     #####################################################
-
+    @mutable('device_qualifier_descriptor')
     def handle_get_device_qualifier_descriptor_request(self, n):
 
         bLength = 10
@@ -169,7 +168,7 @@ class USBDevice:
         return d
 
     def handle_request(self, req):
-        if self.verbose > 3:
+        if self.verbose > 0:
             print(self.name, "received request", req)
 
         # figure out the intended recipient
@@ -328,8 +327,8 @@ class USBDevice:
 
         response = None
 
-        trace = "Dev:GetDes:%d:%d" % (dtype,dindex)
-        self.app.fingerprint.append(trace)
+        # trace = "Dev:GetDes:%d:%d" % (dtype,dindex)
+        # self.app.fingerprint.append(trace)
 
         if self.verbose > 2:
             print(self.name, ("received GET_DESCRIPTOR req %d, index %d, " \
@@ -386,6 +385,7 @@ class USBDevice:
 
         return d
 
+    @mutable('hub_descriptor')
     def handle_get_hub_descriptor_request(self, num):
         bLength = 9
         bDescriptorType = 0x29
@@ -397,15 +397,15 @@ class USBDevice:
         PortPwrCtrlMask = 0xff
 
         hub_descriptor = bytes([
-                bLength,                        # length of descriptor in bytes
-                bDescriptorType,                # descriptor type 0x29 == hub
-                bNbrPorts,                      # number of physical ports
-                wHubCharacteristics & 0xff ,    # hub characteristics
-                (wHubCharacteristics >> 8) & 0xff,
-                bPwrOn2PwrGood,                 # time from power on til power good
-                bHubContrCurrent,               # max current required by hub controller
-                DeviceRemovable,
-                PortPwrCtrlMask
+            bLength,                        # length of descriptor in bytes
+            bDescriptorType,                # descriptor type 0x29 == hub
+            bNbrPorts,                      # number of physical ports
+            wHubCharacteristics & 0xff ,    # hub characteristics
+            (wHubCharacteristics >> 8) & 0xff,
+            bPwrOn2PwrGood,                 # time from power on til power good
+            bHubContrCurrent,               # max current required by hub controller
+            DeviceRemovable,
+            PortPwrCtrlMask
         ])
 
         return hub_descriptor
@@ -480,7 +480,7 @@ class USBDevice:
         self.app.fingerprint.append(trace)
 
 
-        if self.verbose > 1:
+        if self.verbose > 0:
             print(self.name, "received SET_INTERFACE request")
 
         self.app.send_on_endpoint(0, b'')
@@ -537,7 +537,7 @@ class USBDeviceRequest:
             return self.index
         elif rec == 2:              # endpoint
     #        print (self.index, self.index & 0xff)
-            return self.index
+            return self.index & 0xf
 
 
 

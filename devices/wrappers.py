@@ -1,4 +1,5 @@
 import traceback
+import binascii
 
 
 def mutable(stage):
@@ -16,6 +17,8 @@ def mutable(stage):
                 print(traceback.format_exc())
                 print(''.join(traceback.format_stack()))
                 raise e
+            if response:
+                print('[>] %s' % binascii.hexlify(response))
             return response
         return wrapper
     return wrap_f

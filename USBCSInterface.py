@@ -3,18 +3,19 @@
 # Contains class definition for USBCSInterface.
 
 from USB import *
+from USBBase import USBBaseActor
+from devices.wrappers import mutable
 
 
-class USBCSInterface:
+class USBCSInterface(USBBaseActor):
     name = "USB class-specific interface"
 
     def __init__(self, app, cs_config, usbclass, sub, proto, verbose=0, descriptors={}):
-        self.app = app
+        super().__init__(app, verbose)
         self.usbclass = usbclass
         self.sub = sub
         self.proto = proto
         self.cs_config = cs_config
-        self.verbose = verbose
         self.descriptors = descriptors
 
         self.descriptors[USB.desc_type_cs_interface] = self.get_descriptor
@@ -62,11 +63,10 @@ class USBCSInterface:
 
 
     # Table 9-12 of USB 2.0 spec (pdf page 296)
+    @mutable('usbcsinterface_descriptor')
     def get_descriptor(self):
 
-
         d = b''
-
 
         ######################### CDC class ####################################################################
 

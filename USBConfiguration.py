@@ -2,12 +2,14 @@
 #
 # Contains class definition for USBConfiguration.
 from struct import pack
+from USBBase import USBBaseActor
+from devices.wrappers import mutable
 
 
-class USBConfiguration:
+class USBConfiguration(USBBaseActor):
 
-    def __init__(self, app, configuration_index, configuration_string, interfaces):
-        self.app = app
+    def __init__(self, app, configuration_index, configuration_string, interfaces, verbose=0):
+        super().__init__(app, verbose)
         self.configuration_index = configuration_index
         self.configuration_string = configuration_string
         self.configuration_string_index = 0
@@ -27,6 +29,7 @@ class USBConfiguration:
     def set_configuration_string_index(self, i):
         self.configuration_string_index = i
 
+    @mutable('configuration_descriptor')
     def get_descriptor(self):
         interface_descriptors = bytearray()
         for i in self.interfaces:

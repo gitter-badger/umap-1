@@ -3,16 +3,17 @@
 # Contains class definition for USBInterface.
 
 from USB import *
+from USBBase import USBBaseActor
+from devices.wrappers import mutable
 
 
-class USBInterface:
+class USBInterface(USBBaseActor):
     name = "generic USB interface"
 
     def __init__(self, app, interface_number, interface_alternate, interface_class,
             interface_subclass, interface_protocol, interface_string_index,
             verbose=0, endpoints=None, descriptors=None, cs_interfaces=None):
-
-        self.app = app
+        super().__init__(app, verbose)
         self.number = interface_number
         self.alternate = interface_alternate
         self.iclass = interface_class
@@ -23,8 +24,6 @@ class USBInterface:
         self.endpoints = [] if endpoints is None else endpoints
         self.descriptors = {} if descriptors is None else descriptors
         self.cs_interfaces = [] if cs_interfaces is None else cs_interfaces
-
-        self.verbose = verbose
 
         self.descriptors[USB.desc_type_interface] = self.get_descriptor
 
@@ -43,9 +42,6 @@ class USBInterface:
 
     def set_configuration(self, config):
         self.configuration = config
-
-    def get_mutation(self, stage, data=None):
-        return self.app.get_mutation(stage, data)
 
     # USB 2.0 specification, section 9.4.3 (p 281 of pdf)
     # HACK: blatant copypasta from USBDevice pains me deeply
@@ -88,6 +84,7 @@ class USBInterface:
         #self.configuration.device.app.send_on_endpoint(0, b'')
 
     # Table 9-12 of USB 2.0 spec (pdf page 296)
+    @mutable('interface_descriptor')
     def get_descriptor(self):
 
         bLength = 9

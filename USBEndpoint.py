@@ -2,9 +2,11 @@
 #
 # Contains class definition for USBEndpoint.
 from struct import pack
+from USBBase import USBBaseActor
+from devices.wrappers import mutable
 
 
-class USBEndpoint:
+class USBEndpoint(USBBaseActor):
     direction_out = 0x00
     direction_in = 0x01
 
@@ -24,7 +26,7 @@ class USBEndpoint:
 
     def __init__(
             self, app, number, direction, transfer_type, sync_type,
-            usage_type, max_packet_size, interval, handler):
+            usage_type, max_packet_size, interval, handler, verbose=0):
         '''
         :type app: :class:`~MAXUSBApp.MAXUSBApp`
         :param app: application
@@ -42,6 +44,7 @@ class USBEndpoint:
 
         .. note:: OUT endpoint is 1, IN endpoint is either 2 or 3
         '''
+        super().__init__(app, verbose)
         self.app = app
         self.number = number
         self.direction = direction
@@ -67,6 +70,7 @@ class USBEndpoint:
         self.interface = interface
 
     # see Table 9-13 of USB 2.0 spec (pdf page 297)
+    @mutable('endpoint_descriptor')
     def get_descriptor(self):
         address = (self.number & 0x0f) | (self.direction << 7)
         attributes = (
@@ -76,16 +80,17 @@ class USBEndpoint:
         )
         bLength = 7
         bDescriptorType = 5
-        bEndpointAddress = address
-        wMaxPacketSize = self.max_packet_size
 
         d = pack(
             '<BBBBHB',
             bLength,
             bDescriptorType,
-            bEndpointAddress,
+            address,
             attributes,
-            wMaxPacketSize,
+            self.max_packet_size,
             self.interval
         )
         return d
+
+    def get_mutation(self, stage, data=None):
+        return self.app.get_mutation(stage, data)
