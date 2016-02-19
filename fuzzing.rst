@@ -17,6 +17,7 @@ Install python versions
 This will take a while ...
 
 ::
+
     $ pyenv install 3.4.4
     $ pyenv install 2.7.9
 
@@ -24,6 +25,7 @@ Install kitty on python3 environment
 ++++++++++++++++++++++++++++++++++++
 
 ::
+
     $ pyenv shell 3.4.4
     $ pip install git+https://github.com/cisco-sas/kitty.git#egg=kitty
 
@@ -31,6 +33,7 @@ Install kitty and katnip on python2 environment
 +++++++++++++++++++++++++++++++++++++++++++++++
 
 ::
+
     $ pyenv shell 2.7.9
     $ pip install git+https://github.com/cisco-sas/kitty.git#egg=kitty
     $ pip install git+https://github.com/cisco-sas/katnip.git#egg=katnip
@@ -56,6 +59,7 @@ Step #2 - Run the fuzzer
 The fuzzer should start first, and wait for the umap stack.
 
 ::
+
     $ pyenv shell 2.7.9
     $ cd <umap-dir>
     $ ./fuzzer.py
@@ -68,6 +72,7 @@ We specify the device of the facedancer (**/dev/ttyUSB0**).
 We also tell umap to emulate a keyboard.
 
 ::
+
     $ pyenv shell 3.4.4
     $ cd <umap-dir>
     $ ./umap_stack.py fuzz --port /dev/ttyUSB0  --device keyboard
