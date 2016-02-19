@@ -1,8 +1,21 @@
 #!/usr/bin/env python
 '''
-Kitty fuzzer that should work with the umap_stack.py
+Usage:
+    ./fuzzer.py --type=<fuzzing_type> [--kitty-options=<kitty-options>]
+
+Options:
+    -k --kitty-options <kitty-options>  options for the kitty fuzzer, use --kitty-options=--help to get a full list
+    -t --type <fuzzing_type>            type of fuzzing to perform
+
+Possible fuzzing types:
+    enmeration          fuzz generic descriptors at the enumeration phase
+    keyboard            fuzz keyboard (HID) specific messages (not supported yet)
+
+This example stores the mutations in files under ./tmp/
+It also demonstrate how to user kitty fuzzer command line options.
 '''
 import sys
+import docopt
 from kitty.remote.rpc import RpcServer
 from kitty.fuzzers import ClientFuzzer
 from kitty.targets import ClientTarget
@@ -12,7 +25,8 @@ from kitty.model import GraphModel
 import os
 import time
 from kitty.controllers import ClientController
-from katnip.templates.usb import device_descriptor
+from katnip.templates.usb import device_descriptor, interface_descriptor, endpoint_descriptor
+from katnip.templates.usb import string_descriptor, string_descriptor_zero
 
 
 class UmapController(ClientController):
@@ -56,22 +70,31 @@ class UmapController(ClientController):
             count += 1
 
 
-def get_model():
+def get_model(options):
+    fuzzing_type = options['--type']
     model = GraphModel()
-    model.connect(device_descriptor)
+    if fuzzing_type == 'enumeration':
+        model.connect(device_descriptor)
+        model.connect(interface_descriptor)
+        model.connect(endpoint_descriptor)
+        model.connect(string_descriptor)
+        model.connect(string_descriptor_zero)
+    else:
+        msg = '''invalid fuzzing type, should be one of ['enumeration']'''
+        raise Exception(msg)
     return model
 
 
 def main():
-    fuzzer = ClientFuzzer(name='UmapFuzzer', option_line=' '.join(sys.argv[1:]))
-
+    options = docopt.docopt(__doc__)
+    fuzzer = ClientFuzzer(name='UmapFuzzer', option_line=options['--kitty-options'])
     fuzzer.set_interface(WebInterface())
 
     target = ClientTarget(name='USBTarget')
     target.set_controller(UmapController())
-    target.set_mutation_server_timeout(3)
+    target.set_mutation_server_timeout(10)
 
-    model = get_model()
+    model = get_model(options)
     fuzzer.set_model(model)
     fuzzer.set_target(target)
 

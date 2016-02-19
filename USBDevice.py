@@ -360,7 +360,7 @@ class USBDevice(USBBaseActor):
         else:
             return self.configurations[0].get_descriptor()
 
-    @mutable('string0_descriptor')
+    @mutable('string_descriptor_zero')
     def get_string0_descriptor(self):
         d = bytes([
             4,      # length of descriptor in bytes
