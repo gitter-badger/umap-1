@@ -2,12 +2,13 @@
 #
 # Contains class definition for MAXUSBApp.
 
+import sys
+import os
+import traceback
 from util import *
 from Facedancer import *
 from USB import *
 from USBDevice import USBDeviceRequest
-import sys
-import traceback
 
 
 class MAXUSBApp(FacedancerApp):
@@ -213,6 +214,24 @@ class MAXUSBApp(FacedancerApp):
 
         self.write_register(self.reg_ep_stalls, 0x23)
 
+    def check_connection_commands(self):
+        if self.should_reconnect():
+            dev = self.connected_device
+            self.disconnect()
+            self.connect(dev)
+            self.clear_reconnect_trigger()
+
+    def should_reconnect(self):
+        if self.fuzzer:
+            if os.path.isfile('/tmp/umap_kitty/trigger_reconnect'):
+                return True
+        return False
+
+    def clear_reconnect_trigger(self):
+        trigger = '/tmp/umap_kitty/trigger_reconnect'
+        if os.path.isfile(trigger):
+            os.remove(trigger)
+
     def service_irqs(self):
         count = 0
         tmp_irq = 0
@@ -286,4 +305,5 @@ class MAXUSBApp(FacedancerApp):
                     print('umap ignored the exception for some reason... will need to address that later on')
                     pass
             tmp_irq = irq
+            self.check_connection_commands()
         self.disconnect()
