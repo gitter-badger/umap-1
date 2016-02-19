@@ -3,7 +3,7 @@
 # Contains class definitions for USBDevice and USBDeviceRequest.
 
 import traceback
-from struct import unpack
+from struct import unpack, pack
 from USB import *
 from USBClass import *
 from USBBase import USBBaseActor
@@ -41,10 +41,10 @@ class USBDevice(USBBaseActor):
         # maps from USB.desc_type_* to bytearray OR callable
         self.descriptors = descriptors
         self.descriptors[USB.desc_type_device] = self.get_descriptor
-        self.descriptors[USB.desc_type_configuration] = self.handle_get_configuration_descriptor_request
+        self.descriptors[USB.desc_type_configuration] = self.get_configuration_descriptor
         self.descriptors[USB.desc_type_string] = self.handle_get_string_descriptor_request
         self.descriptors[USB.desc_type_hub] = self.handle_get_hub_descriptor_request
-        self.descriptors[USB.desc_type_device_qualifier] = self.handle_get_device_qualifier_descriptor_request
+        self.descriptors[USB.desc_type_device_qualifier] = self.get_device_qualifier_descriptor
 
         self.config_num = -1
         self.configuration = None
@@ -117,7 +117,6 @@ class USBDevice(USBBaseActor):
         bLength = 18
         bDescriptorType = 1
         bMaxPacketSize0 = self.max_packet_size_ep0
-
         d = bytearray([
             bLength,
             bDescriptorType,
@@ -144,7 +143,7 @@ class USBDevice(USBBaseActor):
     # IRQ handlers
     #####################################################
     @mutable('device_qualifier_descriptor')
-    def handle_get_device_qualifier_descriptor_request(self, n):
+    def get_device_qualifier_descriptor(self, n):
 
         bLength = 10
         bDescriptorType = 6
@@ -327,8 +326,8 @@ class USBDevice(USBBaseActor):
 
         response = None
 
-        # trace = "Dev:GetDes:%d:%d" % (dtype,dindex)
-        # self.app.fingerprint.append(trace)
+        trace = "Dev:GetDes:%d:%d" % (dtype,dindex)
+        self.app.fingerprint.append(trace)
 
         if self.verbose > 2:
             print(self.name, ("received GET_DESCRIPTOR req %d, index %d, " \
@@ -351,39 +350,48 @@ class USBDevice(USBBaseActor):
         else:
             self.app.stall_ep0()
 
-    def handle_get_configuration_descriptor_request(self, num):
+    #
+    # No need to mutate this one will mutate
+    # USBConfiguration.get_descriptor instead
+    #
+    def get_configuration_descriptor(self, num):
         if num < len(self.configurations):
             return self.configurations[num].get_descriptor()
         else:
             return self.configurations[0].get_descriptor()
 
+    @mutable('string0_descriptor')
+    def get_string0_descriptor(self):
+        d = bytes([
+            4,      # length of descriptor in bytes
+            3,      # descriptor type 3 == string
+            9,      # language code 0, byte 0
+            4       # language code 0, byte 1
+        ])
+        return d
+
+    @mutable('string_descriptor')
+    def get_string_descriptor(self, num):
+        try:
+            s = self.strings[num-1].encode('utf-16')
+        except:
+            s = self.strings[0].encode('utf-16')
+
+        # Linux doesn't like the leading 2-byte Byte Order Mark (BOM);
+        # FreeBSD is okay without it
+        s = s[2:]
+
+        d = bytearray([
+                len(s) + 2,     # length of descriptor in bytes
+                3               # descriptor type 3 == string
+        ])
+        return d + s
+
     def handle_get_string_descriptor_request(self, num):
         if num == 0:
-            d = bytes([
-                    4,      # length of descriptor in bytes
-                    3,      # descriptor type 3 == string
-                    9,      # language code 0, byte 0
-                    4       # language code 0, byte 1
-            ])
+            return self.get_string0_descriptor()
         else:
-            # string descriptors start at 1
-
-            try:
-                s = self.strings[num-1].encode('utf-16')
-            except:
-                s = self.strings[0].encode('utf-16')
-
-            # Linux doesn't like the leading 2-byte Byte Order Mark (BOM);
-            # FreeBSD is okay without it
-            s = s[2:]
-
-            d = bytearray([
-                    len(s) + 2,     # length of descriptor in bytes
-                    3               # descriptor type 3 == string
-            ])
-            d += s
-
-        return d
+            return self.get_string_descriptor(num)
 
     @mutable('hub_descriptor')
     def handle_get_hub_descriptor_request(self, num):
