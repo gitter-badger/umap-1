@@ -11,8 +11,8 @@ Usage:
 Options:
     -P --port SERIAL_PORT       facedancer's serial port
     -D --device DEVICE_CLASS    class of the deivce
-    -h --fuzzer-host HOST       hostname or IP of the fuzzer [defualt: '127.0.0.1']
-    -p --fuzzer-port PORT       port of the fuzzer [default: 26010]
+    -h --fuzzer-host HOST       hostname or IP of the fuzzer [default: 127.0.0.1]
+    -p --fuzzer-port PORT       port of the fuzzer [default: 26007]
     -v --verbose                verbosity level
 '''
 import docopt
@@ -136,8 +136,8 @@ default_params = {
 
 
 def build_fuzzer(options):
-    return None
     fuzzer = RpcClient(host=options['--fuzzer-host'], port=int(options['--fuzzer-port']))
+    fuzzer.start()
     return fuzzer
 
 
@@ -192,6 +192,7 @@ def kmap_list(options):
 
 def main():
     options = docopt.docopt(__doc__)
+    print(options)
     if options['list']:
         kmap_list(options)
     elif options['fuzz']:
