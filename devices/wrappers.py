@@ -5,7 +5,9 @@ import binascii
 def mutable(stage):
     def wrap_f(func):
         def wrapper(self, *args, **kwargs):
-            data = kwargs.get('fuzzing_data', None)
+            session_data = self.get_session_data(stage)
+            data = kwargs.get('fuzzing_data', {})
+            data.update(session_data)
             response = self.get_mutation(stage=stage, data=data)
             try:
                 if response:
