@@ -7,14 +7,11 @@ Options:
     -k --kitty-options <kitty-options>  options for the kitty fuzzer, use --kitty-options=--help to get a full list
     -t --type <fuzzing_type>            type of fuzzing to perform
 
-Possible fuzzing types:
-    enmeration          fuzz generic descriptors at the enumeration phase
-    keyboard            fuzz keyboard (HID) specific messages (not supported yet)
+Possible fuzzing types: enmeration, smartcard, mass-storage
 
 This example stores the mutations in files under ./tmp/
 It also demonstrate how to user kitty fuzzer command line options.
 '''
-import sys
 import docopt
 from kitty.remote.rpc import RpcServer
 from kitty.fuzzers import ClientFuzzer
@@ -25,8 +22,7 @@ from kitty.model import GraphModel
 import os
 import time
 from kitty.controllers import ClientController
-from katnip.templates.usb import device_descriptor, interface_descriptor, endpoint_descriptor
-from katnip.templates.usb import string_descriptor, string_descriptor_zero
+from katnip.templates.usb import *
 
 
 class UmapController(ClientController):
@@ -79,6 +75,24 @@ def get_model(options):
         model.connect(endpoint_descriptor)
         model.connect(string_descriptor)
         model.connect(string_descriptor_zero)
+    elif fuzzing_type == 'smartcard':
+        model.connect(smartcard_Escape_response)
+        model.connect(smartcard_GetParameters_response)
+        model.connect(smartcard_GetSlotStatus_response)
+        model.connect(smartcard_IccClock_response)
+        model.connect(smartcard_IccPowerOff_response)
+        model.connect(smartcard_IccPowerOn_response)
+        model.connect(smartcard_SetParameters_response)
+        model.connect(smartcard_T0APDU_response)
+        model.connect(smartcard_XfrBlock_response)
+    elif fuzzing_type == 'mass-storage':
+        model.connect(scsi_inquiry_response)
+        model.connect(scsi_mode_sense_10_response)
+        model.connect(scsi_mode_sense_6_response)
+        model.connect(scsi_read_10_response)
+        model.connect(scsi_read_capacity_10_response)
+        model.connect(scsi_read_format_capacities)
+        model.connect(scsi_request_sense_response)
     else:
         msg = '''invalid fuzzing type, should be one of ['enumeration']'''
         raise Exception(msg)
