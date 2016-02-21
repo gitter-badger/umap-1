@@ -60,18 +60,31 @@ class USBMassStorageClass(USBClass):
     name = "USB mass storage class"
 
     def setup_request_handlers(self):
-        self.request_handlers = {
-            0xFF: self.handle_bulk_only_mass_storage_reset_request,
-            0xFE: self.handle_get_max_lun_request
+        self.local_handlers = {
+            0xFF: ('bulk_only_mass_storage_reset_response', self.handle_bulk_only_mass_storage_reset_request),
+            0xFE: ('get_max_lun_response', self.handle_get_max_lun_request)
         }
+
+        self.request_handlers = {
+            x: self.handle_all for x in self.local_handlers
+        }
+
+    def handle_all(self, req):
+        stage, handler = self.local_handlers[req.request]
+        response = self.get_mutation(stage=stage)
+        if response is None:
+            response = handler(req)
+        if response:
+            self.app.send_on_endpoint(0, response)
+        # self.supported()
 
     def handle_bulk_only_mass_storage_reset_request(self, req):
         print('handle_bulk_only_mass_storage_reset_request')
-        self.interface.configuration.device.app.send_on_endpoint(0, b'')
+        return b''
 
     def handle_get_max_lun_request(self, req):
-        print('handle_get_max_lun_request')
-        self.interface.configuration.device.app.send_on_endpoint(0, b'\x00')
+        # print('handle_get_max_lun_request')
+        return b'\x00'
 
 
 class USBMassStorageInterface(USBInterface):
