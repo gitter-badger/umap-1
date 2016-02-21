@@ -4,7 +4,7 @@ Umap & Kitty integration
 This script initializes and runs the USB device stack
 
 Usage:
-    umap_stack.py fuzz --port SERIAL_PORT --device DEVICE_CLASS [--fuzzer-host HOST] [--fuzzer-port PORT] [--verbose ...]
+    umap_stack.py (fuzz|nofuzz) --port SERIAL_PORT --device DEVICE_CLASS [--fuzzer-host HOST] [--fuzzer-port PORT] [--verbose ...]
     umap_stack.py list classes
     umap_stack.py list subclasses <CLASS>
 
@@ -17,7 +17,6 @@ Options:
 '''
 import docopt
 import traceback
-import time
 from kitty.remote.rpc import RpcClient
 from Facedancer import Facedancer
 from MAXUSBApp import MAXUSBApp
@@ -136,6 +135,8 @@ default_params = {
 
 
 def build_fuzzer(options):
+    if options['nofuzz']:
+        return None
     fuzzer = RpcClient(host=options['--fuzzer-host'], port=int(options['--fuzzer-port']))
     fuzzer.start()
     return fuzzer
@@ -195,7 +196,7 @@ def main():
     print(options)
     if options['list']:
         kmap_list(options)
-    elif options['fuzz']:
+    elif options['fuzz'] or options['nofuzz']:
         kmap_fuzz(options)
 
 
