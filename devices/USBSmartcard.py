@@ -457,7 +457,7 @@ class USBSmartcardInterface(USBInterface):
             bMaxCCIDBusySlots
         )
 
-        response = pack('B', len(response)) + response
+        response = pack('B', len(response) + 1) + response
         return response
 
     def handle_data_available(self, data):
