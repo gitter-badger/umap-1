@@ -3,8 +3,8 @@
 # Contains class definitions for USBDevice and USBDeviceRequest.
 
 import traceback
-from struct import unpack, pack
-from USB import *
+from struct import unpack
+from USB import USB
 from USBClass import *
 from USBBase import USBBaseActor
 from devices.wrappers import mutable
@@ -464,6 +464,7 @@ class USBDevice(USBBaseActor):
 
         # HACK: blindly acknowledge request
         self.ack_status_stage()
+        self.supported()
 
     # USB 2.0 specification, section 9.4.4 (p 282 of pdf)
     def handle_get_interface_request(self, req):
