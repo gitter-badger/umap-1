@@ -41,6 +41,7 @@ class USBCDCInterface(USBInterface):
 
     def __init__(self, int_num, app, usbclass, sub, proto, verbose=0):
         descriptors = {}
+        self.name = USBCDCInterface.name + '(%s)' % int_num
         cs_config1 = [
             0x00,  # Header Functional Descriptor
             0x1001,  # bcdCDC
@@ -90,7 +91,7 @@ class USBCDCInterface(USBInterface):
                 usage_type=USBEndpoint.usage_type_data,
                 max_packet_size=0x2000,
                 interval=0xff,
-                handler=self.handle_buffer_available
+                handler=self.handle_ep3_buffer_available
             )
         ]
 
@@ -115,7 +116,7 @@ class USBCDCInterface(USBInterface):
                 usage_type=USBEndpoint.usage_type_data,
                 max_packet_size=0x2000,
                 interval=0x00,
-                handler=self.handle_buffer_available
+                handler=self.handle_ep2_buffer_available
             )
         ]
 
@@ -148,11 +149,16 @@ class USBCDCInterface(USBInterface):
     @mutable('cdc_handle_ep1_data_available')
     def handle_ep1_data_available(self, data):
         if self.verbose > 0:
-            print(self.name, "handling", len(data), "bytes of audio data")
+            print(self.name, "handling", len(data), "bytes of cdc data")
 
-    def handle_buffer_available(self):
+    def handle_ep3_buffer_available(self):
         if self.verbose > 0:
-            print(self.name, 'buffer available')
+            print(self.name, 'ep3 buffer available')
+
+    def handle_ep2_buffer_available(self):
+        if self.verbose > 0:
+            print(self.name, 'ep2 buffer available')
+
 
 
 class USBCDCDevice(USBDevice):
