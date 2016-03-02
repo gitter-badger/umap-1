@@ -31,6 +31,8 @@ from devices.USBImage import USBImageDevice
 from devices.USBMassStorage import USBMassStorageDevice
 from devices.USBPrinter import USBPrinterDevice
 from devices.USBSmartcard import USBSmartcardDevice
+from devices.USBMtp import USBMtpDevice
+
 
 list_cmd = 'umap_stack.py list classes'
 
@@ -100,6 +102,15 @@ class_map = {
             'usbclass': 8,
             'subclass': 6,  # SCSI transparent command set
             'proto': 0x50,  # bulk-only (BBB) transport
+        }
+    },
+    'mtp': {
+        'fd_class': USBMtpDevice,
+        'classes': [0xff],
+        'params': {
+            'vid': 0x04e8,
+            'pid': 0x685c,
+            'rev': 0x0200,
         }
     },
     'printer': {
