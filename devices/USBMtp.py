@@ -2,9 +2,9 @@
 #
 # Contains class definitions to implement a USB keyboard.
 
-import binascii
+from binascii import hexlify, unhexlify
 from enum import IntEnum
-from struct import pack
+import struct
 from USB import *
 from USBDevice import *
 from USBConfiguration import *
@@ -144,7 +144,7 @@ class MtpAccessCaps(IntEnum):
     READ_ONLY_WITH_DELETE = 0x0002
 
 
-class MtpContainerHeader(object):
+class MtpContainer(object):
 
     def __init__(self, data):
         (
@@ -152,7 +152,7 @@ class MtpContainerHeader(object):
             self.type,
             self.code,
             self.tid,
-        ) = struct.unpack('<IHHI', str(data[:12]))
+        ) = struct.unpack('<IHHI', data[:12])
         self.data = data[12:]
 
 
@@ -164,11 +164,11 @@ def MStr(s):
     return struct.pack('<B', len(encoded)) + encoded
 
 
-def MS16(i):
+def MS8(i):
     return struct.pack('<B', i)
 
 
-def MU16(i):
+def MU8(i):
     return struct.pack('<B', i)
 
 
@@ -210,12 +210,12 @@ class MtpStorageInfo(object):
 
     def serialize(self):
         return (
-            MI16(self.stype) +
-            MI16(self.fstype) +
-            MI16(self.access) +
-            MI64(self.max_cap) +
-            MI64(self.free_space_bytes) +
-            MI32(self.free_space_objs) +
+            MU16(self.stype) +
+            MU16(self.fstype) +
+            MU16(self.access) +
+            MU64(self.max_cap) +
+            MU64(self.free_space_bytes) +
+            MU32(self.free_space_objs) +
             MStr(self.desc) +
             MStr(self.vid)
         )
@@ -223,7 +223,7 @@ class MtpStorageInfo(object):
 
 def mtp_response(container, status):
     tid = 0 if not container else container.tid
-    return MI32(0xC) + MI16(MtpContainerTypes.Response) + MI16(status) + MI32(tid)
+    return MU32(0xC) + MU16(MtpContainerTypes.Response) + MU16(status) + MU32(tid)
 
 
 def mtp_error(container, status):
@@ -231,7 +231,7 @@ def mtp_error(container, status):
 
 
 def mtp_data(container, data):
-    return MI32(len(data) + 0xC) + MI16(MtpContainerTypes.Data) + MI16(container.code) + MI32(container.tid) + data
+    return MU32(len(data) + 0xC) + MU16(MtpContainerTypes.Data) + MU16(container.code) + MU32(container.tid) + data
 
 
 class MtpDevice(object):
@@ -295,16 +295,19 @@ class MtpDevice(object):
         }
 
     def handle_data(self, data):
-        data, status = self._handle_data(data)
+        data, response = self._handle_data(data)
         if data is not None:
+            print('[*] putting data in response queue')
             self.resp_queue.insert(0, data)
-        if status is not None:
-            self.resp_queue.insert(0, data)
+        if response is not None:
+            print('[*] putting response in response queue')
+            self.resp_queue.insert(0, response)
 
     def _handle_data(self, data):
         '''
         .. todo:: handle events ??
         '''
+        print('[*] handling data. len: %#x' % len(data))
         if len(data) < 12:
             return mtp_error(None, MtpResponseCodes.INVALID_CODE_FORMAT)
         container = MtpContainer(data)
@@ -319,7 +322,8 @@ class MtpDevice(object):
                 self.response_code = MtpResponseCodes.OK
                 handler = self.command_handlers[container.code]
                 result = handler(container)
-                return (mtp_response(container, self.response_code), result)
+                return (result, mtp_response(container, self.response_code))
+        print('[!] unhandled code: %#x' % container.code)
         return mtp_error(container, MtpResponseCodes.OPERATION_NOT_SUPPORTED)
 
     def get_data(self):
@@ -329,7 +333,7 @@ class MtpDevice(object):
     @mutable('mtp_op_GetDeviceInfo_response')
     def op_GetDeviceInfo(self, container):
         # should parse this as well, but it will do for now...
-        dev_info = (
+        dev_info = unhexlify(
             '6400060000006400266d006900630072006f0073006f00660074002e006300' +
             '6f006d003a00200031002e0030003b00200061006e00640072006f00690064' +
             '002e0063006f006d003a00200031002e0030003b00000000001e0000000110' +
@@ -341,7 +345,7 @@ class MtpDevice(object):
             '75006e006700000009470054002d004900390033003000300000000431002e' +
             '00300000001133003200330030006400300064003100630032003500330037' +
             '003000310031000000'
-        ).decode('hex')
+        )
         return mtp_data(container, dev_info)
 
     @mutable('mtp_op_OpenSession_response')
@@ -358,7 +362,7 @@ class MtpDevice(object):
 
     @mutable('mtp_op_GetStorageIDs_response')
     def op_GetStorageIDs(self, container):
-        sids = ''.join(MI32(sid) for sid in self.storages)
+        sids = ''.join(MU32(sid) for sid in self.storages)
         return mtp_data(container, sids)
 
     @mutable('mtp_op_GetStorageInfo_response')
@@ -548,7 +552,7 @@ class USBMtpInterface(USBInterface):
                 app=app,
                 number=3,
                 direction=USBEndpoint.direction_in,
-                transfer_type=USBEndpoint.transfer_type_bulk,
+                transfer_type=USBEndpoint.transfer_type_interrupt,
                 sync_type=USBEndpoint.sync_type_none,
                 usage_type=USBEndpoint.usage_type_data,
                 max_packet_size=512,
@@ -584,19 +588,19 @@ class USBMtpInterface(USBInterface):
     def handle_ep1_data_available(self, data):
         if self.verbose > 0:
             print('in handle_ep1_data_available')
-            print('data: %s' % binascii.hexlify(data))
+            print('data: %s' % hexlify(data))
         self.mtp_device.handle_data(data)
 
     def handle_ep2_buffer_available(self):
-        if self.verbose > 0:
-            print('in handle_ep2_buffer_available')
         resp = self.mtp_device.get_data()
         if resp:
+            print('[*] handle_ep2_buffer_available')
+            print('[>] %s' % (hexlify(resp)))
             self.app.send_on_endpoint(2, resp)
 
     def handle_ep3_buffer_available(self):
-        if self.verbose > 0:
-            print('in handle_ep3_buffer_available')
+        # if self.verbose > 0:
+        #     print('in handle_ep3_buffer_available')
         pass
 
 
