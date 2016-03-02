@@ -50,17 +50,6 @@ class USBVendorInterface(USBInterface):
         endpoints = [
             USBEndpoint(
                 app,
-                3,          # endpoint number
-                USBEndpoint.direction_in,
-                USBEndpoint.transfer_type_interrupt,
-                USBEndpoint.sync_type_none,
-                USBEndpoint.usage_type_data,
-                16384,      # max packet size
-                8,         # polling interval, see USB 2.0 spec Table 9-13
-                self.handle_buffer_available    # handler function
-            ),
-            USBEndpoint(
-                app,
                 1,          # endpoint number
                 USBEndpoint.direction_out,
                 USBEndpoint.transfer_type_bulk,
@@ -80,7 +69,18 @@ class USBVendorInterface(USBInterface):
                 16384,      # max packet size
                 0,         # polling interval, see USB 2.0 spec Table 9-13
                 None    # handler function
-            )
+            ),
+            USBEndpoint(
+                app,
+                3,          # endpoint number
+                USBEndpoint.direction_in,
+                USBEndpoint.transfer_type_interrupt,
+                USBEndpoint.sync_type_none,
+                USBEndpoint.usage_type_data,
+                16384,      # max packet size
+                8,         # polling interval, see USB 2.0 spec Table 9-13
+                self.handle_buffer_available    # handler function
+            ),
         ]
 
         # TODO: un-hardcode string index (last arg before "verbose")
@@ -111,12 +111,12 @@ class USBVendorDevice(USBDevice):
     name = "USB Vendor device"
 
     def __init__(self, app, vid, pid, rev, verbose=0, **kwargs):
-        interface = USBVendorInterface(app, verbose=verbose)
+        interface = USBVendorInterface(app=app, verbose=verbose)
         config = USBConfiguration(
                 app=app,
-                configuration_index=1,                                          # index
-                configuration_string="Vendor device",    # string desc
-                interfaces=[interface]                  # interfaces
+                configuration_index=1,
+                configuration_string="Vendor device",
+                interfaces=[interface]
         )
 
         super(USBVendorDevice, self).__init__(
