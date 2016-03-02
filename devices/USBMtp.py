@@ -297,10 +297,8 @@ class MtpDevice(object):
     def handle_data(self, data):
         data, response = self._handle_data(data)
         if data is not None:
-            print('[*] putting data in response queue')
             self.resp_queue.insert(0, data)
         if response is not None:
-            print('[*] putting response in response queue')
             self.resp_queue.insert(0, response)
 
     def _handle_data(self, data):
@@ -362,7 +360,9 @@ class MtpDevice(object):
 
     @mutable('mtp_op_GetStorageIDs_response')
     def op_GetStorageIDs(self, container):
-        sids = ''.join(MU32(sid) for sid in self.storages)
+        sids = b''
+        for sid in self.storages:
+            sids += MU32(sid)
         return mtp_data(container, sids)
 
     @mutable('mtp_op_GetStorageInfo_response')
@@ -588,14 +588,12 @@ class USBMtpInterface(USBInterface):
     def handle_ep1_data_available(self, data):
         if self.verbose > 0:
             print('in handle_ep1_data_available')
-            print('data: %s' % hexlify(data))
         self.mtp_device.handle_data(data)
 
     def handle_ep2_buffer_available(self):
         resp = self.mtp_device.get_data()
         if resp:
             print('[*] handle_ep2_buffer_available')
-            print('[>] %s' % (hexlify(resp)))
             self.app.send_on_endpoint(2, resp)
 
     def handle_ep3_buffer_available(self):
