@@ -71,19 +71,17 @@ class USBMassStorageClass(USBClass):
 
     def handle_all(self, req):
         stage, handler = self.local_handlers[req.request]
-        response = self.get_mutation(stage=stage)
-        if response is None:
-            response = handler(req)
-        if response:
+        response = handler(req)
+        if response is not None:
             self.app.send_on_endpoint(0, response)
         # self.supported()
 
+    @mutable('bulk_only_mass_storage_reset_response')
     def handle_bulk_only_mass_storage_reset_request(self, req):
-        print('handle_bulk_only_mass_storage_reset_request')
         return b''
 
+    @mutable('get_max_lun_response')
     def handle_get_max_lun_request(self, req):
-        # print('handle_get_max_lun_request')
         return b'\x00'
 
 
@@ -112,6 +110,17 @@ class USBMassStorageInterface(USBInterface):
             USBEndpoint(
                 app=app,
                 number=2,
+                direction=USBEndpoint.direction_in,
+                transfer_type=USBEndpoint.transfer_type_interrupt,
+                sync_type=USBEndpoint.sync_type_none,
+                usage_type=USBEndpoint.usage_type_data,
+                max_packet_size=16384,
+                interval=0,
+                handler=None
+            ),
+            USBEndpoint(
+                app=app,
+                number=3,
                 direction=USBEndpoint.direction_in,
                 transfer_type=USBEndpoint.transfer_type_bulk,
                 sync_type=USBEndpoint.sync_type_none,
