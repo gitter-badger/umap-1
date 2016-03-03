@@ -2,14 +2,15 @@
 #
 # Contains class definitions to implement a USB keyboard.
 
-from binascii import hexlify, unhexlify
+from binascii import unhexlify, hexlify
 from enum import IntEnum
 import struct
-from USB import *
-from USBDevice import *
-from USBConfiguration import *
-from USBInterface import *
-from USBEndpoint import *
+# from USB import *
+from USBDevice import USBDevice
+from USBConfiguration import USBConfiguration
+from USBInterface import USBInterface
+from USBEndpoint import USBEndpoint
+from USBVendor import USBVendor
 from .wrappers import mutable
 
 
@@ -297,8 +298,12 @@ class MtpDevice(object):
     def handle_data(self, data):
         data, response = self._handle_data(data)
         if data is not None:
+            if self.verbose > 0:
+                print('[!] data: %s' % (hexlify(data)))
             self.resp_queue.insert(0, data)
         if response is not None:
+            if self.verbose > 0:
+                print('[!] response: %s' % (hexlify(response)))
             self.resp_queue.insert(0, response)
 
     def _handle_data(self, data):
@@ -556,7 +561,7 @@ class USBMtpInterface(USBInterface):
                 sync_type=USBEndpoint.sync_type_none,
                 usage_type=USBEndpoint.usage_type_data,
                 max_packet_size=512,
-                interval=0,
+                interval=32,
                 handler=self.handle_ep3_buffer_available
             ),
         ]
@@ -577,13 +582,8 @@ class USBMtpInterface(USBInterface):
 
         # self.device_class = USBMtpClass(app, verbose)
         # self.device_class.set_interface(self)
-
-        empty_preamble = [0x00] * 10
-        text = [0x0f, 0x00, 0x16, 0x00, 0x28, 0x00]
-        # text = []
-
-        self.keys = [chr(x) for x in empty_preamble + text]
-        self.transaction_stage = 0
+        # OS String descriptor
+        self.add_string_with_id(0xee, 'MSFT100'.encode('utf-16') + b'\x00\x00')
 
     def handle_ep1_data_available(self, data):
         if self.verbose > 0:
@@ -600,6 +600,49 @@ class USBMtpInterface(USBInterface):
         # if self.verbose > 0:
         #     print('in handle_ep3_buffer_available')
         pass
+
+
+class USBMsosVendor(USBVendor):
+
+    def setup_request_handlers(self):
+        self.local_handlers = {
+            0x00: self.handle_msos_vendor_extended_config_descriptor,
+        }
+        self.request_handlers = {
+            x: self.handle_all for x in self.local_handlers
+        }
+
+    def handle_all(self, req):
+        handler = self.local_handlers[req.request]
+        response = handler(req)
+        if response is not None:
+            self.app.send_on_endpoint(0, response)
+        # self.supported()
+
+    @mutable('msos_vendor_extended_config_descriptor')
+    def handle_msos_vendor_extended_config_descriptor(self, req):
+        '''
+        Taken from OS_Desc_CompatID
+        https://msdn.microsoft.com/en-us/windows/hardware/gg463179
+        '''
+        def pad(data, pad_len=8):
+            to_pad = pad_len - len(data)
+            return data + (b'\x00' * to_pad)
+
+        self.property_sections = [
+            [0x00, 0x01, pad(b'MTP'), pad(b''), pad(b'', 6)]
+        ]
+        bcdVersion = 0x0100
+        wIndex = 0x00
+        bCount = len(self.property_sections)
+        reserved = pad(b'\x00', 7)
+        properties = b''
+        for prop in self.property_sections:
+            properties += struct.pack('BB', prop[0], prop[1]) + prop[2] + prop[3] + prop[4]
+        payload = struct.pack('<HHB', bcdVersion, wIndex, bCount) + reserved + properties
+        dwLength = len(payload) + 4
+        payload = struct.pack('<I', dwLength) + payload
+        return payload
 
 
 class USBMtpDevice(USBDevice):
@@ -629,3 +672,5 @@ class USBMtpDevice(USBDevice):
             descriptors={},
             verbose=verbose
         )
+        self.device_vendor = USBMsosVendor(app=app, verbose=verbose)
+        self.device_vendor.set_device(self)
