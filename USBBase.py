@@ -9,6 +9,7 @@ class USBBaseActor(object):
         self.app = app
         self.verbose = verbose
         self.session_data = {}
+        self.str_dict = {}
 
     def get_mutation(self, stage, data=None):
         '''
@@ -40,3 +41,25 @@ class USBBaseActor(object):
             if self.app.fplog:
                 self.app.fplog.write(" **SUPPORTED**\n")
             self.app.stop = True
+
+    def add_string_with_id(self, str_id, s):
+        '''
+        Add a string to the string dictionary
+
+        :param str_id: id of the string
+        :param s: the string
+        '''
+        self.str_dict[str_id] = s
+
+    def get_string_by_id(self, str_id):
+        '''
+        Get a string by it's id
+
+        :param str_id: string id
+        :return: the string, or None if id does not exist
+        '''
+        if self.verbose > 0:
+            print(self.name + ' getting string by id %#x' % str_id)
+        if str_id in self.str_dict:
+            return self.str_dict[str_id]
+        return None

@@ -216,6 +216,8 @@ class USBDevice(USBBaseActor):
 #        print ("DEBUG: Hander=", handler)
 
         if not handler:
+            if self.verbose > 0:
+                print('request not handled', req)
 
             if self.app.mode == 2 or self.app.mode == 3:
 
@@ -372,11 +374,15 @@ class USBDevice(USBBaseActor):
 
     @mutable('string_descriptor')
     def get_string_descriptor(self, num):
-        try:
+        if self.verbose > 0:
+            print('[*] get_string_descriptor: %#x (%#x)' % (num, len(self.strings)))
+        s = None
+        if num <= len(self.strings):
             s = self.strings[num-1].encode('utf-16')
-        except:
+        else:
+            s = self.configuration.get_string_by_id(num)
+        if not s:
             s = self.strings[0].encode('utf-16')
-
         # Linux doesn't like the leading 2-byte Byte Order Mark (BOM);
         # FreeBSD is okay without it
         s = s[2:]
