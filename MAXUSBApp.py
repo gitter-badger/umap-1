@@ -96,19 +96,19 @@ class MAXUSBApp(FacedancerApp):
         self.ack_cmd = FacedancerCommand(self.app_num, 0x00, b'\x01')
 
     def read_register(self, reg_num, ack=False):
-        if self.verbose > 1:
+        if self.verbose > 4:
             print(self.app_name, "reading register 0x%02x" % reg_num)
         self.read_register_cmd.data = bytearray([reg_num << 3, 0])
         if ack:
             self.write_register_cmd.data[0] |= 1
         self.device.writecmd(self.read_register_cmd)
         resp = self.device.readcmd()
-        if self.verbose > 2:
+        if self.verbose > 5:
             print(self.app_name, "read register 0x%02x has value 0x%02x" % (reg_num, resp.data[1]))
         return resp.data[1]
 
     def write_register(self, reg_num, value, ack=False):
-        if self.verbose > 2:
+        if self.verbose > 4:
             print(self.app_name, "writing register 0x%02x with value 0x%02x" % (reg_num, value))
         self.write_register_cmd.data = bytearray([(reg_num << 3) | 2, value])
         if ack:
@@ -144,14 +144,14 @@ class MAXUSBApp(FacedancerApp):
         self.write_register(reg, bit)
 
     def read_bytes(self, reg, n):
-        if self.verbose > 2:
+        if self.verbose > 4:
             print(self.app_name, "reading", n, "bytes from register", reg)
         data = bytes([(reg << 3)] + ([0] * n))
         cmd = FacedancerCommand(self.app_num, 0x00, data)
 
         self.device.writecmd(cmd)
         resp = self.device.readcmd()
-        if self.verbose > 3:
+        if self.verbose > 5:
             print(self.app_name, "read", len(resp.data) - 1, "bytes from register", reg)
         return resp.data[1:]
 
@@ -162,7 +162,7 @@ class MAXUSBApp(FacedancerApp):
         self.device.writecmd(cmd)
         self.device.readcmd()  # null response
 
-        if self.verbose > 3:
+        if self.verbose > 5:
             print(self.app_name, "wrote", len(data) - 1, "bytes to register", reg)
 
     # HACK: but given the limitations of the MAX chips, it seems necessary
@@ -189,7 +189,7 @@ class MAXUSBApp(FacedancerApp):
         self.write_bytes(fifo_reg, data)
         self.write_register(bc_reg, len(data), ack=True)
 
-        if self.verbose > 1:
+        if self.verbose > 3:
             print(self.app_name, "wrote", bytes_as_hex(data), "to endpoint", ep_num)
 
     # HACK: but given the limitations of the MAX chips, it seems necessary
@@ -203,13 +203,13 @@ class MAXUSBApp(FacedancerApp):
 
         data = self.read_bytes(self.reg_ep1_out_fifo, byte_count)
 
-        if self.verbose > 1:
+        if self.verbose > 3:
             print(self.app_name, "read", bytes_as_hex(data), "from endpoint", ep_num)
 
         return data
 
     def stall_ep0(self):
-        if self.verbose > 0:
+        if self.verbose > 2:
             print(self.app_name, "stalling endpoint 0")
 
         self.write_register(self.reg_ep_stalls, 0x23)
@@ -265,10 +265,10 @@ class MAXUSBApp(FacedancerApp):
 
                 return
 
-            if self.verbose > 3:
+            if self.verbose > 4:
                 print(self.app_name, "read endpoint irq: 0x%02x" % irq)
 
-            if self.verbose > 2:
+            if self.verbose > 3:
                 if irq & ~ (
                     self.is_in0_buffer_avail |
                     self.is_in2_buffer_avail |

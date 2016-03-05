@@ -19,7 +19,7 @@ class Facedancer:
         self.serialport.setDTR(1)
 
     def reset(self):
-        if self.verbose > 1:
+        if self.verbose > 0:
             print("Facedancer resetting...")
 
         self.halt()
@@ -35,11 +35,11 @@ class Facedancer:
 
         b = self.serialport.read(n)
 
-        if self.verbose > 3:
+        if self.verbose > 4:
             print("Facedancer received", len(b), "bytes;",
                     self.serialport.inWaiting(), "bytes remaining")
 
-        if self.verbose > 2:
+        if self.verbose > 5:
             print("Facedancer Rx:", bytes_as_hex(b))
 
         return b
@@ -64,7 +64,7 @@ class Facedancer:
 
         cmd = FacedancerCommand(app, verb, data)
 
-        if self.verbose > 1:
+        if self.verbose > 4:
             print("Facedancer Rx command:", cmd)
 
         return cmd
@@ -72,7 +72,7 @@ class Facedancer:
     def write(self, b):
         """Write raw bytes."""
 
-        if self.verbose > 2:
+        if self.verbose > 5:
             print("Facedancer Tx:", bytes_as_hex(b))
 
         self.serialport.write(b)
@@ -81,7 +81,7 @@ class Facedancer:
         """Write a single command."""
         self.write(c.as_bytestring())
 
-        if self.verbose > 1:
+        if self.verbose > 4:
             print("Facedancer Tx command:", c)
 
 
