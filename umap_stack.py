@@ -211,7 +211,6 @@ def kmap_list(options):
 
 def main():
     options = docopt.docopt(__doc__)
-    print(options)
     if options['list']:
         kmap_list(options)
     elif options['fuzz'] or options['nofuzz']:
