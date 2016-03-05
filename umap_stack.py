@@ -4,19 +4,21 @@ Umap & Kitty integration
 This script initializes and runs the USB device stack
 
 Usage:
-    umap_stack.py (fuzz|nofuzz) --port SERIAL_PORT --device DEVICE_CLASS [--fuzzer-host HOST] [--fuzzer-port PORT] [--verbose ...]
+    umap_stack.py (fuzz|nofuzz) -P=SERIAL_PORT -C=DEVICE_CLASS [-d=SECONDS] [-i=HOST] [-p=PORT] [-v ...]
     umap_stack.py list classes
     umap_stack.py list subclasses <CLASS>
 
 Options:
     -P --port SERIAL_PORT       facedancer's serial port
-    -D --device DEVICE_CLASS    class of the deivce
-    -h --fuzzer-host HOST       hostname or IP of the fuzzer [default: 127.0.0.1]
+    -C --class DEVICE_CLASS     class of the device
+    -d --delay SECONDS          delay closing the devices SECONDS seconds
+    -i --fuzzer-ip HOST         hostname or IP of the fuzzer [default: 127.0.0.1]
     -p --fuzzer-port PORT       port of the fuzzer [default: 26007]
     -v --verbose                verbosity level
 '''
 import docopt
 import traceback
+import time
 from kitty.remote.rpc import RpcClient
 from Facedancer import Facedancer
 from MAXUSBApp import MAXUSBApp
@@ -148,7 +150,7 @@ default_params = {
 def build_fuzzer(options):
     if options['nofuzz']:
         return None
-    fuzzer = RpcClient(host=options['--fuzzer-host'], port=int(options['--fuzzer-port']))
+    fuzzer = RpcClient(host=options['--fuzzer-ip'], port=int(options['--fuzzer-port']))
     fuzzer.start()
     return fuzzer
 
@@ -161,7 +163,7 @@ def build_device(fuzzer, options):
     current_testcase = None
     fd = Facedancer(sp, verbose=verbosity)
     app = MAXUSBApp(fd, logfp, mode, current_testcase, verbose=verbosity, fuzzer=fuzzer)
-    dev_class = options['--device']
+    dev_class = options['--class']
     if dev_class not in class_map:
         raise Exception('Unknown device: %s, run `%s` to list supported devices' % (dev_class, list_cmd))
     device_config = class_map[dev_class]
@@ -173,9 +175,14 @@ def build_device(fuzzer, options):
 
 
 def run_device(device, options):
+    delay = options['--delay']
+    delay = None if delay is None else float(delay)
     try:
         device.connect()
         device.run()
+        if delay:
+            print('delaying disconnection for %s seconds' % delay)
+            time.sleep(delay)
     except:
         print('Got exception while connecting/running device')
         print(traceback.format_exc())
