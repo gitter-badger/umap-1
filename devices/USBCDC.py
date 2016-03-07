@@ -20,8 +20,8 @@ class USBCDCClass(USBClass):
 
     def setup_local_handlers(self):
         self.local_handlers = {
-            0x22: handle_cdc_set_control_line_state,
-            0x20: handle_cdc_set_line_coding,
+            0x22: self.handle_cdc_set_control_line_state,
+            0x20: self.handle_cdc_set_line_coding,
         }
 
     @mutable('cdc_set_control_line_state_response')
@@ -29,7 +29,7 @@ class USBCDCClass(USBClass):
         return b''
 
     @mutable('cdc_set_line_coding_response')
-    def handle_cdc_set_line_coding_response(self, req):
+    def handle_cdc_set_line_coding(self, req):
         return b''
 
 
@@ -118,12 +118,12 @@ class USBCDCInterface(USBInterface):
         ]
 
         if int_num == 0:
-                endpoints = endpoints0
-                cs_interfaces = cs_interfaces0
+            endpoints = endpoints0
+            cs_interfaces = cs_interfaces0
 
         elif int_num == 1:
-                endpoints = endpoints1
-                cs_interfaces = cs_interfaces1
+            endpoints = endpoints1
+            cs_interfaces = cs_interfaces1
 
         # TODO: un-hardcode string index (last arg before "verbose")
         super(USBCDCInterface, self).__init__(

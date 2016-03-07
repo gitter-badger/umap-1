@@ -2,6 +2,7 @@
 #
 # Contains class definitions to implement a USB Audio device.
 
+import struct
 from USB import *
 from USBDevice import *
 from USBConfiguration import *
@@ -26,31 +27,31 @@ class USBAudioClass(USBClass):
             0x01: self.handle_audio_set_cur,
         }
 
-    @mutable('audio_set_idle_response')
+    @mutable('audio_set_idle_response', silent=True)
     def handle_audio_set_idle(self, req):
         return b''
 
-    @mutable('audio_get_max_response')
+    @mutable('audio_get_max_response', silent=True)
     def handle_audio_get_max(self, req):
         return b'\xf0\xff'
 
-    @mutable('audio_get_min_response')
+    @mutable('audio_get_min_response', silent=True)
     def handle_audio_get_min(self, req):
         return b'\xa0\xe0'
 
-    @mutable('audio_get_res_response')
+    @mutable('audio_get_res_response', silent=True)
     def handle_audio_get_res(self, req):
         return b'\x30\x00'
 
-    @mutable('audio_get_cur_response')
+    @mutable('audio_get_cur_response', silent=True)
     def handle_audio_get_cur(self, req):
         return b''
 
-    @mutable('audio_set_res_response')
+    @mutable('audio_set_res_response', silent=True)
     def handle_audio_set_res(self, req):
         return b''
 
-    @mutable('audio_set_cur_response')
+    @mutable('audio_set_cur_response', silent=True)
     def handle_audio_set_cur(self, req):
         return b''
 
@@ -244,14 +245,14 @@ class USBAudioInterface(USBInterface):
         self.device_class = USBAudioClass(app)
         self.device_class.set_interface(self)
 
-    @mutable('audio_ep2_buffer_available')
     def audio_ep2_buffer_available(self):
-        self.logger.debug("handling buffer available on ep2")
         return self.app.send_on_endpoint(2, b'\x00\x00\x00')
 
     @mutable('audio_hid_descriptor')
     def get_hid_descriptor(self, *args, **kwargs):
-        return b'\x09\x21\x10\x01\x00\x01\x22\x2b\x00'
+        report_desc = self.get_report_descriptor()
+        report_desc_len = struct.pack('<H', len(report_desc))
+        return b'\x09\x21\x10\x01\x00\x01\x22' + report_desc_len
 
     @mutable('audio_report_descriptor')
     def get_report_descriptor(self, *args, **kwargs):
