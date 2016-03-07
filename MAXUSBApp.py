@@ -251,7 +251,7 @@ class MAXUSBApp(FacedancerApp):
                 self.stop = True
                 if self.fplog:
                     self.fplog.write("\n")
-                if slef.verbose > 0:
+                if self.verbose > 0:
                     print('count == 10000 and self.mode == 2')
                 return
 
@@ -267,7 +267,7 @@ class MAXUSBApp(FacedancerApp):
 
                 if self.fplog:
                     self.fplog.write("\n")
-                if slef.verbose > 0:
+                if self.verbose > 0:
                     print('count == 2000 and (self.mode(%s) == 3, 1 or 4)' % (self.mode))
                 return
 

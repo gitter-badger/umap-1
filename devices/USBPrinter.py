@@ -129,7 +129,7 @@ class USBPrinterInterface(USBInterface):
 
     def handle_data_available(self, data):
         if not self.writing:
-            print ("Writing PCL file: %s" % self.filename)
+            self.logger.info("Writing PCL file: %s" % self.filename)
 
         with open(self.filename, "ab") as out_file:
             self.writing = True
@@ -138,7 +138,7 @@ class USBPrinterInterface(USBInterface):
         text_buffer = ''.join(chr(c) for c in data)
 
         if 'EOJ\n' in text_buffer:
-            print ("File write complete")
+            self.logger.info("File write complete")
             out_file.close()
             self.app.stop = True
 

@@ -458,7 +458,7 @@ class USBSmartcardInterface(USBInterface):
             try:
                 self.app.netserver_from_endpoint_sd.send(data)
             except:
-                print ("Error: No network client connected")
+                self.logger.error("Error: No network client connected")
 
             while True:
                 if len(self.app.reply_buffer) > 0:
@@ -472,7 +472,7 @@ class USBSmartcardInterface(USBInterface):
             self.session_data['data'] = data
             response = handler(slot, seq, data)
         else:
-            print("Received Smartcard command not understood")
+            self.logger.error("Received Smartcard command not understood")
             response = b''
 
         if response and not self.app.server_running:

@@ -11,16 +11,16 @@ def mutable(stage):
             response = self.get_mutation(stage=stage, data=data)
             try:
                 if response:
-                    print('[+] Got mutation for stage %s' % stage)
+                    self.logger.info('Got mutation for stage %s' % stage)
                 else:
-                    print('[*] Calling %-30s "%s"' % (func.__name__, stage))
+                    self.logger.info('Calling %s (stage: "%s")' % (func.__name__, stage))
                     response = func(self, *args, **kwargs)
             except Exception as e:
-                print(traceback.format_exc())
-                print(''.join(traceback.format_stack()))
+                self.logger.error(traceback.format_exc())
+                self.logger.error(''.join(traceback.format_stack()))
                 raise e
             if response is not None:
-                print('[>] %s' % binascii.hexlify(response))
+                self.logger.info('Response: %s' % binascii.hexlify(response))
             return response
         return wrapper
     return wrap_f

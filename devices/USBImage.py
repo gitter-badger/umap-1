@@ -147,8 +147,7 @@ class USBImageInterface(USBInterface):
         self.device_class.set_interface(self)
 
     def create_send_ok(self, transaction_id):
-        if self.verbose > 0:
-            print(self.name, "sent Image:OK")
+        self.logger.debug(self.name, "sent Image:OK")
         container_type = 0x03  # Response block
         response_code = 0x2001  # "OK"
         container_length = 0x0000000c  # always this length
@@ -156,17 +155,13 @@ class USBImageInterface(USBInterface):
         return response
 
     def handle_ep2_buffer_available(self):
-        if self.verbose > 2:
-            print('[*] ep2 - buffer available')
+        self.logger.verbose('ep2 - buffer available')
 
     def handle_ep3_buffer_available(self):
-        if self.verbose > 2:
-            print('[*] ep3 - buffer available')
+        self.logger.verbose('ep3 - buffer available')
 
     def handle_ep1_data_available(self, data):
-        print('[*] Request: %s' % hexlify(data))
-        if self.verbose > -1:
-            print(self.name, "handling", len(data), "bytes of Image class data")
+        self.logger.info('Request: %s' % hexlify(data))
         self.device_class.supported()
         container = ContainerRequestWrapper(data)
         opcode = container.opcode
@@ -177,7 +172,7 @@ class USBImageInterface(USBInterface):
             try:
                 self.app.netserver_from_endpoint_sd.send(data)
             except:
-                print ("Error: No network client connected")
+                self.logger.error("No network client connected")
             while True:
                 if len(self.app.reply_buffer) > 0:
                     self.app.send_on_endpoint(2, self.app.reply_buffer)
@@ -197,21 +192,17 @@ class USBImageInterface(USBInterface):
                 response2 = op2(container, fuzzing_data=fuzzing_data)
 
         if response and not self.app.server_running:
-            print('[*] Response: %s' % hexlify(response))
-            if self.verbose > 2:
-                print(self.name, "responding with", len(response), "bytes:", bytes_as_hex(response))
+            self.logger.info('Response: %s' % hexlify(response))
+            self.logger.verbose("responding with", len(response), "bytes:", bytes_as_hex(response))
             self.configuration.device.app.send_on_endpoint(2, response)
 
         if response2 and not self.app.server_running:
-            print('[*] Response2: %s' % hexlify(response2))
-            if self.verbose > 2:
-                print(self.name, "responding with", len(response2), "bytes:", bytes_as_hex(response2))
+            self.logger.info('Response2: %s' % hexlify(response2))
+            self.logger.verbose("responding with", len(response2), "bytes:", bytes_as_hex(response2))
             self.configuration.device.app.send_on_endpoint(2, response2)
 
     @mutable('image_OpenSession_response1')
     def op_OpenSession_1(self, container, **kwargs):
-        if self.verbose > 0:
-            print(self.name, "got OpenSession")
         return None
 
     @mutable('image_OpenSession_response2')
@@ -220,8 +211,6 @@ class USBImageInterface(USBInterface):
 
     @mutable('image_CloseSession_response1')
     def op_CloseSession_1(self, container, **kwargs):
-        if self.verbose > 0:
-            print(self.name, "got CloseSession")
         return None
 
     @mutable('image_CloseSession_response2')
@@ -230,8 +219,6 @@ class USBImageInterface(USBInterface):
 
     @mutable('image_SetDevicePropValue_response1')
     def op_SetDevicePropValue_1(self, container, **kwargs):
-        if self.verbose > 0:
-            print(self.name, "got SetDevicePropValue")
         return None
 
     @mutable('image_SetDevicePropValue_response2')
@@ -243,8 +230,6 @@ class USBImageInterface(USBInterface):
 
     @mutable('image_GetStorageInfo_response1')
     def op_GetStorageInfo_1(self, container, **kwargs):
-        if self.verbose > 0:
-            print(self.name, "got GetStorageInfo")
         container_type = 0x0002  # Data block
         operation_code = 0x1005  # GetStorageInfo
         storage_type = 0x0004  # Removable RAM
@@ -283,8 +268,6 @@ class USBImageInterface(USBInterface):
 
     @mutable('image_GetObjectInfo_response1')
     def op_GetObjectInfo_1(self, container, **kwargs):
-        if self.verbose > 0:
-            print(self.name, "got GetObjectInfo")
         container_type = 0x0002  # Data block
         operation_code = 0x1008  # GetObjectInfo
         storage_id = 0x00010001  # Phy: 0x0001 Log: 0x0001
@@ -339,8 +322,6 @@ class USBImageInterface(USBInterface):
 
     @mutable('image_GetObjectHandles_response1')
     def op_GetObjectHandles_1(self, container, **kwargs):
-        if self.verbose > 0:
-            print(self.name, "got GetObjectHandles")
         container_type = 0x0002  # Data block
         operation_code = Opcodes.GetObjectHandles
         object_handle_array_size = 0x00000001  # 1 array size
@@ -363,8 +344,6 @@ class USBImageInterface(USBInterface):
 
     @mutable('image_GetStorageIDs_response1')
     def op_GetStorageIDs_1(self, container, **kwargs):
-        if self.verbose > 0:
-            print(self.name, "got GetStorageIDs")
         container_type = 0x0002  # Data block
         operation_code = Opcodes.GetStorageIDs
         storage_id_array_size = 0x00000001  # 1 storage ID
@@ -387,8 +366,6 @@ class USBImageInterface(USBInterface):
 
     @mutable('image_GetDeviceInfo_response1')
     def op_GetDeviceInfo_1(self, container, **kwargs):
-        if self.verbose > 0:
-            print(self.name, "got GetDeviceInfo")
         container_type = 0x0002  # Data block
         operation_code = Opcodes.GetDeviceInfo
         standard_version = 0x0064  # version 1.0
@@ -452,8 +429,6 @@ class USBImageInterface(USBInterface):
 
     @mutable('image_GetThumb_response1')
     def op_GetThumb_1(self, container, **kwargs):
-        if self.verbose > 0:
-            print(self.name, "got GetThumb")
         thumb_data = (self.thumb_image.read_data())
         container_type = 0x0002  # Data block
         operation_code = Opcodes.GetThumb

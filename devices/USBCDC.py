@@ -145,17 +145,13 @@ class USBCDCInterface(USBInterface):
 
     @mutable('cdc_handle_ep1_data_available')
     def handle_ep1_data_available(self, data):
-        if self.verbose > 0:
-            print(self.name, "handling", len(data), "bytes of cdc data")
+        self.logger.debug("handling", len(data), "bytes of cdc data")
 
     def handle_ep3_buffer_available(self):
-        if self.verbose > 0:
-            print(self.name, 'ep3 buffer available')
+        self.logger.debug('ep3 buffer available')
 
     def handle_ep2_buffer_available(self):
-        if self.verbose > 0:
-            print(self.name, 'ep2 buffer available')
-
+        self.logger.debug('ep2 buffer available')
 
 
 class USBCDCDevice(USBDevice):

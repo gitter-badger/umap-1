@@ -163,8 +163,7 @@ class USBMassStorageInterface(USBInterface):
 
     @mutable('scsi_inquiry_response')
     def handle_inquiry(self, cbw):
-        if self.verbose > 0:
-            print(self.name, "got SCSI Inquiry, data", bytes_as_hex(cbw.cb[1:]))
+        self.logger.debug('got SCSI Inquiry, data', bytes_as_hex(cbw.cb[1:]))
         peripheral = 0x00  # SBC
         RMB = 0x80  # Removable
         version = 0x00
@@ -182,8 +181,7 @@ class USBMassStorageInterface(USBInterface):
 
     @mutable('scsi_request_sense_response')
     def handle_request_sense(self, cbw):
-        if self.verbose > 0:
-            print(self.name, "got SCSI Request Sense, data", bytes_as_hex(cbw.cb[1:]))
+        self.logger.debug("got SCSI Request Sense, data", bytes_as_hex(cbw.cb[1:]))
         response_code = 0x70
         valid = 0x00
         filemark = 0x06
@@ -209,13 +207,11 @@ class USBMassStorageInterface(USBInterface):
 
     @mutable('scsi_test_unit_ready_response')
     def handle_test_unit_ready(self, cbw):
-        if self.verbose > 0:
-            print(self.name, "got SCSI Test Unit Ready")
+        self.logger.debug("got SCSI Test Unit Ready")
 
     @mutable('scsi_read_capacity_10_response')
     def handle_read_capacity_10(self, cbw):
-        if self.verbose > 0:
-            print(self.name, "got SCSI Read Capacity, data", bytes_as_hex(cbw.cb[1:]))
+        self.logger.debug("got SCSI Read Capacity, data", bytes_as_hex(cbw.cb[1:]))
         lastlba = self.disk_image.get_sector_count()
         logical_block_address = pack('>I', lastlba)
         length = 0x00000200
@@ -228,19 +224,16 @@ class USBMassStorageInterface(USBInterface):
 
     @mutable('scsi_prevent_allow_medium_removal_response')
     def handle_prevent_allow_medium_removal(self, cbw):
-        if self.verbose > 0:
-            print(self.name, "got SCSI Prevent/Allow Removal")
+        self.logger.debug("got SCSI Prevent/Allow Removal")
 
     @mutable('scsi_write_10_response')
     def handle_write_10(self, cbw):
-        if self.verbose > 0:
-            print(self.name, "got SCSI Write (10), data", bytes_as_hex(cbw.cb[1:]))
+        self.logger.debug("got SCSI Write (10), data", bytes_as_hex(cbw.cb[1:]))
 
         base_lba = unpack('>I', cbw.cb[1:5])[0]
         num_blocks = unpack('>H', cbw.cb[7:9])[0]
 
-        if self.verbose > 0:
-            print(self.name, "got SCSI Write (10), lba", base_lba, "+",  num_blocks, "block(s)")
+        self.logger.debug("got SCSI Write (10), lba", base_lba, "+",  num_blocks, "block(s)")
 
         # save for later
         self.write_cbw = cbw
@@ -259,8 +252,7 @@ class USBMassStorageInterface(USBInterface):
         base_lba = unpack('>I', cbw.cb[2:6])[0]
         num_blocks = unpack('>H', cbw.cb[7:9])[0]
 
-        if self.verbose > 0:
-            print(self.name, "got SCSI Read (10), lba", base_lba, "+", num_blocks, "block(s)")
+        self.logger.debug("got SCSI Read (10), lba", base_lba, "+", num_blocks, "block(s)")
 
         # Note that here we send the data directly rather than putting
         # something in 'response' and letting the end of the switch send
@@ -283,8 +275,7 @@ class USBMassStorageInterface(USBInterface):
     def handle_scsi_mode_sense(self, cbw):
         page = cbw.cb[2] & 0x3f
 
-        if self.verbose > 0:
-            print(self.name, "got SCSI Mode Sense, page code 0x%02x" % page)
+        self.logger.debug("got SCSI Mode Sense, page code 0x%02x" % page)
 
         if page == 0x1c:
             medium_type = 0x00
@@ -322,8 +313,7 @@ class USBMassStorageInterface(USBInterface):
 
     @mutable('scsi_read_format_capacities')
     def handle_read_format_capacities(self, cbw):
-        if self.verbose > 0:
-            print(self.name, "got SCSI Read Format Capacity")
+        self.logger.debug("got SCSI Read Format Capacity")
         # header
         response = pack('>I', 8)
         num_sectors = 0x1000
@@ -333,12 +323,10 @@ class USBMassStorageInterface(USBInterface):
         return response
 
     def handle_synchronize_cache(self, cbw):
-        if self.verbose > 0:
-            print(self.name, "got Synchronize Cache (10)")
+        self.logger.debug("got Synchronize Cache (10)")
 
     def handle_data_available(self, data):
-        if self.verbose > 0:
-            print(self.name, "handling", len(data), "bytes of SCSI data")
+        self.logger.debug("handling", len(data), "bytes of SCSI data")
         self.supported()
         cbw = CommandBlockWrapper(data)
         opcode = cbw.cb[0]
@@ -349,7 +337,7 @@ class USBMassStorageInterface(USBInterface):
             try:
                 self.app.netserver_from_endpoint_sd.send(data)
             except:
-                print ("Error: No network client connected")
+                self.logger.error("No network client connected")
 
             while True:
                 if len(self.app.reply_buffer) > 0:
@@ -358,8 +346,7 @@ class USBMassStorageInterface(USBInterface):
                     break
 
         elif self.is_write_in_progress:
-            if self.verbose > 0:
-                print(self.name, "got", len(data), "bytes of SCSI write data")
+            self.logger.debug("got", len(data), "bytes of SCSI write data")
 
             self.write_data += data
 
@@ -382,18 +369,16 @@ class USBMassStorageInterface(USBInterface):
                     # with the CSW
                     return
             except NotImplementedError as ex:
-                print('Command %02x is not implemented yet (though it should be supported...)' % opcode)
+                self.logger.error('Command %02x is not implemented yet (though it should be supported...)' % opcode)
                 raise ex
         else:
-            if self.verbose > 0:
-                print(self.name, "received unsupported SCSI opcode 0x%x" % opcode)
+            self.logger.warning(self.name, "received unsupported SCSI opcode 0x%x" % opcode)
             status = 0x02   # command failed
             if cbw.data_transfer_length > 0:
                 response = bytes([0] * cbw.data_transfer_length)
 
         if response and not self.app.server_running:
-            if self.verbose > 2:
-                print(self.name, "responding with", len(response), "bytes:", bytes_as_hex(response))
+            self.logger.notify(self.name, "responding with", len(response), "bytes:", bytes_as_hex(response))
             self.configuration.device.app.send_on_endpoint(3, response)
 
         csw = bytes([
@@ -403,8 +388,7 @@ class USBMassStorageInterface(USBInterface):
             status
         ])
 
-        if self.verbose > 3:
-            print(self.name, "responding with status =", status)
+        self.logger.verbose(self.name, "responding with status =", status)
 
         self.configuration.device.app.send_on_endpoint(3, csw)
 

@@ -3,13 +3,48 @@ Common functionality for all USB actors (interface, class, etc.)
 '''
 
 
+class _MyLogger(object):
+
+    def __init__(self, level, name):
+        self.level = level
+        self.name = name
+
+    def log(self, level, prefix, *args, **kwargs):
+        if level <= self.level:
+            print('[%s][%s]' % (prefix, self.name), *args, **kwargs)
+
+    def always(self, *args, **kwargs):
+        self.log(0, 'A', *args, **kwargs)
+
+    def error(self, *args, **kwargs):
+        self.log(0, 'E', *args, **kwargs)
+
+    def info(self, *args, **kwargs):
+        self.log(0, 'I', *args, **kwargs)
+
+    def warning(self, *args, **kwargs):
+        self.log(1, 'W', *args, **kwargs)
+
+    def debug(self, *args, **kwargs):
+        self.log(1, 'D', *args, **kwargs)
+
+    def verbose(self, *args, **kwargs):
+        self.log(2, 'V', *args, **kwargs)
+
+    def notify(self, *args, **kwargs):
+        self.log(3, 'N', *args, **kwargs)
+
+
 class USBBaseActor(object):
+
+    name = 'ACTOR'
 
     def __init__(self, app, verbose):
         self.app = app
         self.verbose = verbose
         self.session_data = {}
         self.str_dict = {}
+        self.logger = _MyLogger(verbose, type(self).__name__)
 
     def get_mutation(self, stage, data=None):
         '''
@@ -58,8 +93,7 @@ class USBBaseActor(object):
         :param str_id: string id
         :return: the string, or None if id does not exist
         '''
-        if self.verbose > 0:
-            print(self.name + ' getting string by id %#x' % str_id)
+        self.logger.debug(self.name + ' getting string by id %#x' % str_id)
         if str_id in self.str_dict:
             return self.str_dict[str_id]
         return None

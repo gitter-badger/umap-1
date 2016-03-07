@@ -10,9 +10,11 @@ from devices.wrappers import mutable
 class USBInterface(USBBaseActor):
     name = "generic USB interface"
 
-    def __init__(self, app, interface_number, interface_alternate, interface_class,
-            interface_subclass, interface_protocol, interface_string_index,
-            verbose=0, endpoints=None, descriptors=None, cs_interfaces=None):
+    def __init__(
+        self, app, interface_number, interface_alternate, interface_class,
+        interface_subclass, interface_protocol, interface_string_index,
+        verbose=0, endpoints=None, descriptors=None, cs_interfaces=None
+    ):
         super().__init__(app, verbose)
         self.number = interface_number
         self.alternate = interface_alternate
@@ -53,13 +55,10 @@ class USBInterface(USBBaseActor):
 
         response = None
 
-        trace = "Int:GetDes:%d:%d" % (dtype,dindex)
+        trace = "Int:GetDes:%d:%d" % (dtype, dindex)
         self.app.fingerprint.append(trace)
 
-        if self.verbose > 2:
-            print(self.name, ("received GET_DESCRIPTOR req %d, index %d, " \
-                    + "language 0x%04x, length %d") \
-                    % (dtype, dindex, lang, n))
+        self.logger.verbose(("received GET_DESCRIPTOR req %d, index %d, " + "language 0x%04x, length %d") % (dtype, dindex, lang, n))
 
         # TODO: handle KeyError
         response = self.descriptors[dtype]
@@ -70,15 +69,13 @@ class USBInterface(USBBaseActor):
             n = min(n, len(response))
             self.configuration.device.app.send_on_endpoint(0, response[:n])
 
-            if self.verbose > 5:
-                print(self.name, "sent", n, "bytes in response")
+            self.logger.notify("sent", n, "bytes in response")
 
     def handle_set_interface_request(self, req):
         trace = "Int:SetInt" 
         self.app.fingerprint.append(trace)
 
-        if self.verbose > 0:
-            print(self.name, "received SET_INTERFACE request")
+        self.logger.debug("received SET_INTERFACE request")
 
         self.configuration.device.app.stall_ep0()
         #self.configuration.device.app.send_on_endpoint(0, b'')

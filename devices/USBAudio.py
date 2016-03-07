@@ -246,8 +246,7 @@ class USBAudioInterface(USBInterface):
 
     @mutable('audio_ep2_buffer_available')
     def audio_ep2_buffer_available(self):
-        if self.verbose > 0:
-            print(self.name, "handling buffer available on ep2")
+        self.logger.debug("handling buffer available on ep2")
         return self.app.send_on_endpoint(2, b'\x00\x00\x00')
 
     @mutable('audio_hid_descriptor')

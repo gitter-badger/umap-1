@@ -30,82 +30,60 @@ class USBFtdiVendor(USBVendor):
 
     @mutable('ftdi_reset_response')
     def handle_reset(self, req):
-        if self.verbose > 0:
-            print(self.name, "received reset request")
-
         return b''
 
     @mutable('ftdi_modem_ctrl_response')
     def handle_modem_ctrl(self, req):
-        if self.verbose > 0:
-            print(self.name, "received modem_ctrl request")
         dtr = req.value & 0x0001
         rts = (req.value & 0x0002) >> 1
         dtren = (req.value & 0x0100) >> 8
         rtsen = (req.value & 0x0200) >> 9
         if dtren:
-            print("DTR is enabled, value", dtr)
+            self.logger.info("DTR is enabled, value", dtr)
         if rtsen:
-            print("RTS is enabled, value", rts)
+            self.logger.info("RTS is enabled, value", rts)
         return b''
 
     @mutable('ftdi_set_flow_ctrl_response')
     def handle_set_flow_ctrl(self, req):
-        if self.verbose > 0:
-            print(self.name, "received set_flow_ctrl request")
         if req.value == 0x000:
-            print("SET_FLOW_CTRL to no handshaking")
+            self.logger.info("SET_FLOW_CTRL to no handshaking")
         if req.value & 0x0001:
-            print("SET_FLOW_CTRL for RTS/CTS handshaking")
+            self.logger.info("SET_FLOW_CTRL for RTS/CTS handshaking")
         if req.value & 0x0002:
-            print("SET_FLOW_CTRL for DTR/DSR handshaking")
+            self.logger.info("SET_FLOW_CTRL for DTR/DSR handshaking")
         if req.value & 0x0004:
-            print("SET_FLOW_CTRL for XON/XOFF handshaking")
+            self.logger.info("SET_FLOW_CTRL for XON/XOFF handshaking")
         return b''
 
     @mutable('ftdi_set_baud_rate_response')
     def handle_set_baud_rate(self, req):
-        if self.verbose > 0:
-            print(self.name, "received set_baud_rate request")
-
         dtr = req.value & 0x0001
-        print("baud rate set to", dtr)
+        self.logger.info("baud rate set to", dtr)
         return b''
 
     @mutable('ftdi_set_data_response')
     def handle_set_data(self, req):
-        if self.verbose > 0:
-            print(self.name, "received set_data request")
         return b''
 
     @mutable('ftdi_get_status_response')
     def handle_get_status(self, req):
-        if self.verbose > 0:
-            print(self.name, "received get_status request")
         return b''
 
     @mutable('ftdi_set_event_char_response')
     def handle_set_event_char(self, req):
-        if self.verbose > 0:
-            print(self.name, "received set_event_char request")
         return b''
 
     @mutable('ftdi_set_error_char_response')
     def handle_set_error_char(self, req):
-        if self.verbose > 0:
-            print(self.name, "received set_error_char request")
         return b''
 
     @mutable('ftdi_set_latency_timer_response')
     def handle_set_latency_timer(self, req):
-        if self.verbose > 0:
-            print(self.name, "received set_latency_timer request")
         return b''
 
     @mutable('ftdi_get_latency_timer_response')
     def handle_get_latency_timer(self, req):
-        if self.verbose > 0:
-            print(self.name, "received get_latency_timer request")
         return b'\x01'
 
 
@@ -155,8 +133,7 @@ class USBFtdiInterface(USBInterface):
 
     def handle_data_available(self, data):
         st = data[1:]
-        if self.verbose > 0:
-            print(self.name, "received string", st)
+        self.logger.debug(self.name, "received string", st)
         st = st.replace(b'\r', b'\r\n')
         reply = b'\x01\x00' + st
         self.configuration.device.app.send_on_endpoint(3, reply)

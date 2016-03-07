@@ -168,8 +168,7 @@ class USBDevice(USBBaseActor):
         return d
 
     def handle_request(self, req):
-        if self.verbose > 0:
-            print(self.name, "received request", req)
+        self.logger.debug("received request", req)
 
         # figure out the intended recipient
         recipient_type = req.get_recipient()
@@ -186,8 +185,7 @@ class USBDevice(USBBaseActor):
             recipient = self.configuration.interfaces[0]    # HACK for Hub class
 
         if not recipient:
-            if self.verbose > 0:
-                print(self.name, "invalid recipient, stalling")
+            self.logger.warning("invalid recipient, stalling")
             self.app.stall_ep0()
             return
 
@@ -202,8 +200,7 @@ class USBDevice(USBBaseActor):
             handler_entity = recipient.device_vendor
 
         if not handler_entity:
-            if self.verbose > 0:
-                print(self.name, "invalid handler entity, stalling")
+            self.logger.warning("invalid handler entity, stalling")
             self.app.stall_ep0()
             return
 
@@ -212,13 +209,9 @@ class USBDevice(USBBaseActor):
 
         handler = handler_entity.request_handlers.get(req.request, None)
 
-#        print ("DEBUG: Recipient=", recipient)
-#        print ("DEBUG: Handler entity=", handler_entity)
-#        print ("DEBUG: Hander=", handler)
-
         if not handler:
-            if self.verbose > 0:
-                print('request not handled', req)
+            self.logger.error('request not handled', req)
+            self.logger.debug('handler entity: %s' % (type(handler_entity)))
 
             if self.app.mode == 2 or self.app.mode == 3:
 
@@ -226,16 +219,15 @@ class USBDevice(USBBaseActor):
                 return
 
             if self.app.mode == 1:
-
                 print ("**SUPPORTED???**")
                 if self.app.fplog:
-                    self.app.fplog.write ("**SUPPORTED???**\n")
+                    self.app.fplog.write("**SUPPORTED???**\n")
                 self.app.stop = True
                 return
 
             else:
 
-                print(self.name, "invalid handler, stalling")
+                self.logger.warning("invalid handler, stalling")
                 self.app.stall_ep0()
 
         try:
@@ -257,8 +249,8 @@ class USBDevice(USBBaseActor):
                 try:
                     endpoint.handler()
                 except:
-                    print(traceback.format_exc())
-                    print(''.join(traceback.format_stack()))
+                    self.logger.error(traceback.format_exc())
+                    self.logger.error(''.join(traceback.format_stack()))
                     raise
 
     # standard request handlers
@@ -266,14 +258,9 @@ class USBDevice(USBBaseActor):
 
     # USB 2.0 specification, section 9.4.5 (p 282 of pdf)
     def handle_get_status_request(self, req):
-
         trace = "Dev:GetSta"
         self.app.fingerprint.append(trace)
-
-
-        if self.verbose > 2:
-            print(self.name, "received GET_STATUS request")
-
+        self.logger.verbose("received GET_STATUS request")
         # self-powered and remote-wakeup (USB 2.0 Spec section 9.4.5)
 #        response = b'\x03\x00'
         response = b'\x01\x00'
@@ -285,27 +272,16 @@ class USBDevice(USBBaseActor):
         trace = "Dev:CleFea:%d:%d" % (req.request_type, req.value)
         self.app.fingerprint.append(trace)
 
-        if self.verbose > 2:
-            print(self.name, "received CLEAR_FEATURE request with type 0x%02x and value 0x%02x" \
-                % (req.request_type, req.value))
-
-        #self.app.send_on_endpoint(0, b'')
+        self.logger.verbose("received CLEAR_FEATURE request with type 0x%02x and value 0x%02x" % (req.request_type, req.value))
+        # self.app.send_on_endpoint(0, b'')
 
     # USB 2.0 specification, section 9.4.9 (p 286 of pdf)
     def handle_set_feature_request(self, req):
-
         trace = "Dev:SetFea"
         self.app.fingerprint.append(trace)
-
-
-        if self.verbose > 2:
-            print(self.name, "received SET_FEATURE request")
-
+        self.logger.verbose("received SET_FEATURE request")
         response = b''
         self.app.send_on_endpoint(0, response)
-
-
-
 
     # USB 2.0 specification, section 9.4.6 (p 284 of pdf)
     def handle_set_address_request(self, req):
@@ -316,9 +292,7 @@ class USBDevice(USBBaseActor):
         trace = "Dev:SetAdr:%d" % self.address
         self.app.fingerprint.append(trace)
 
-        if self.verbose > 2:
-            print(self.name, "received SET_ADDRESS request for address",
-                    self.address)
+        self.logger.verbose("received SET_ADDRESS request for address", self.address)
 
     # USB 2.0 specification, section 9.4.3 (p 281 of pdf)
     def handle_get_descriptor_request(self, req):
@@ -332,10 +306,7 @@ class USBDevice(USBBaseActor):
         trace = "Dev:GetDes:%d:%d" % (dtype,dindex)
         self.app.fingerprint.append(trace)
 
-        if self.verbose > 2:
-            print(self.name, ("received GET_DESCRIPTOR req %d, index %d, " \
-                    + "language 0x%04x, length %d") \
-                    % (dtype, dindex, lang, n))
+        self.logger.verbose(("received GET_DESCRIPTOR req %d, index %d, " + "language 0x%04x, length %d") % (dtype, dindex, lang, n))
 
         response = self.descriptors.get(dtype, None)
         # print ("desc:", self.descriptors)
@@ -348,8 +319,7 @@ class USBDevice(USBBaseActor):
             self.app.send_on_endpoint(0, response[:n])
             self.app.verbose -= 1
 
-            if self.verbose > 5:
-                print(self.name, "sent", n, "bytes in response")
+            self.logger.notify("sent", n, "bytes in response")
         else:
             self.app.stall_ep0()
 
@@ -375,8 +345,7 @@ class USBDevice(USBBaseActor):
 
     @mutable('string_descriptor')
     def get_string_descriptor(self, num):
-        if self.verbose > 0:
-            print('[*] get_string_descriptor: %#x (%#x)' % (num, len(self.strings)))
+        self.logger.debug('get_string_descriptor: %#x (%#x)' % (num, len(self.strings)))
         s = None
         if num <= len(self.strings):
             s = self.strings[num-1].encode('utf-16')
@@ -431,21 +400,16 @@ class USBDevice(USBBaseActor):
         trace = "Dev:SetDes"
         self.app.fingerprint.append(trace)
 
-        if self.verbose > 0:
-            print(self.name, "received SET_DESCRIPTOR request")
+        self.logger.debug("received SET_DESCRIPTOR request")
 
     # USB 2.0 specification, section 9.4.2 (p 281 of pdf)
     def handle_get_configuration_request(self, req):
 
         trace = "Dev:GetCon"
         self.app.fingerprint.append(trace)
-
-
         if self.verbose > 0:
-            print(self.name, "received GET_CONFIGURATION request")
+            self.logger.debug("received GET_CONFIGURATION request")
         self.app.send_on_endpoint(0, b'\x01') #HACK - once configuration supported
-
-
 
     # USB 2.0 specification, section 9.4.7 (p 285 of pdf)
     def handle_set_configuration_request(self, req):
@@ -453,18 +417,17 @@ class USBDevice(USBBaseActor):
         trace = "Dev:SetCon"
         self.app.fingerprint.append(trace)
 
-        if self.verbose > 0:
-            print(self.name, "received SET_CONFIGURATION request")
+        self.logger.debug("received SET_CONFIGURATION request")
         self.supported_device_class_trigger = True
 
         # configs are one-based
         self.config_num = req.value - 1
-        #print ("DEBUG: config_num=", self.config_num)
+        # print ("DEBUG: config_num=", self.config_num)
         self.configuration = self.configurations[self.config_num]
         self.state = USB.state_configured
 
         # collate endpoint numbers
-        self.endpoints = { }
+        self.endpoints = {}
         for i in self.configuration.interfaces:
             for e in i.endpoints:
                 self.endpoints[e.number] = e
@@ -475,14 +438,9 @@ class USBDevice(USBBaseActor):
 
     # USB 2.0 specification, section 9.4.4 (p 282 of pdf)
     def handle_get_interface_request(self, req):
-
         trace = "Dev:GetInt"
         self.app.fingerprint.append(trace)
-
-
-        if self.verbose > 0:
-            print(self.name, "received GET_INTERFACE request")
-
+        self.logger.debug("received GET_INTERFACE request")
         if req.index == 0:
             # HACK: currently only support one interface
             self.app.send_on_endpoint(0, b'\x00')
@@ -491,24 +449,17 @@ class USBDevice(USBBaseActor):
 
     # USB 2.0 specification, section 9.4.10 (p 288 of pdf)
     def handle_set_interface_request(self, req):
-
         trace = "Dev:SetInt"
         self.app.fingerprint.append(trace)
-
-
-        if self.verbose > 0:
-            print(self.name, "received SET_INTERFACE request")
-
+        self.logger.debug("received SET_INTERFACE request")
         self.app.send_on_endpoint(0, b'')
 
     # USB 2.0 specification, section 9.4.11 (p 288 of pdf)
     def handle_synch_frame_request(self, req):
-
         trace = "Dev:SynFra"
         self.app.fingerprint.append(trace)
 
-        if self.verbose > 0:
-            print(self.name, "received SYNCH_FRAME request")
+        self.logger.debug("received SYNCH_FRAME request")
 
 
 class USBDeviceRequest:
@@ -529,11 +480,12 @@ class USBDeviceRequest:
 
     def raw(self):
         """returns request as bytes"""
-        b = bytes([ self.request_type, self.request,
-                    (self.value  >> 8) & 0xff, self.value  & 0xff,
-                    (self.index  >> 8) & 0xff, self.index  & 0xff,
-                    (self.length >> 8) & 0xff, self.length & 0xff
-                  ])
+        b = bytes([
+            self.request_type, self.request,
+            (self.value >> 8) & 0xff, self.value & 0xff,
+            (self.index >> 8) & 0xff, self.index & 0xff,
+            (self.length >> 8) & 0xff, self.length & 0xff
+        ])
         return b
 
     def get_direction(self):
@@ -552,10 +504,4 @@ class USBDeviceRequest:
         if rec == 1:                # interface
             return self.index
         elif rec == 2:              # endpoint
-    #        print (self.index, self.index & 0xff)
             return self.index & 0xf
-
-
-
-
-
