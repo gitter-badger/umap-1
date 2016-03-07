@@ -92,21 +92,21 @@ class USBMassStorageInterface(USBInterface):
                 transfer_type=USBEndpoint.transfer_type_bulk,
                 sync_type=USBEndpoint.sync_type_none,
                 usage_type=USBEndpoint.usage_type_data,
-                max_packet_size=16384,
+                max_packet_size=0x40,
                 interval=0,
                 handler=self.handle_data_available
             ),
-            USBEndpoint(
-                app=app,
-                number=2,
-                direction=USBEndpoint.direction_in,
-                transfer_type=USBEndpoint.transfer_type_interrupt,
-                sync_type=USBEndpoint.sync_type_none,
-                usage_type=USBEndpoint.usage_type_data,
-                max_packet_size=16384,
-                interval=0,
-                handler=None
-            ),
+            # USBEndpoint(
+            #     app=app,
+            #     number=2,
+            #     direction=USBEndpoint.direction_in,
+            #     transfer_type=USBEndpoint.transfer_type_interrupt,
+            #     sync_type=USBEndpoint.sync_type_none,
+            #     usage_type=USBEndpoint.usage_type_data,
+            #     max_packet_size=0x40,
+            #     interval=0,
+            #     handler=None
+            # ),
             USBEndpoint(
                 app=app,
                 number=3,
@@ -114,7 +114,7 @@ class USBMassStorageInterface(USBInterface):
                 transfer_type=USBEndpoint.transfer_type_bulk,
                 sync_type=USBEndpoint.sync_type_none,
                 usage_type=USBEndpoint.usage_type_data,
-                max_packet_size=16384,
+                max_packet_size=0x40,
                 interval=0,
                 handler=None
             )
