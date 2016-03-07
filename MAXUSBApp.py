@@ -140,6 +140,9 @@ class MAXUSBApp(FacedancerApp):
                 print(self.app_name, 'ERROR: disconnect called when already disconnected')
         self.connected_device = None
 
+    def is_connected(self):
+        return self.connected_device is not None
+
     def clear_irq_bit(self, reg, bit):
         self.write_register(reg, bit)
 

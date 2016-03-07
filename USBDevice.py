@@ -94,7 +94,8 @@ class USBDevice(USBBaseActor):
         self.state = USB.state_powered
 
     def disconnect(self):
-        self.app.disconnect()
+        if self.app.is_connected():
+            self.app.disconnect()
         self.app.server_running = False
 
         if self.app.netserver_to_endpoint_sd:
