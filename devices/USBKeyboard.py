@@ -34,8 +34,7 @@ class USBKeyboardClass(USBClass):
 
     @mutable('hid_get_report_response')
     def handle_get_report(self, req):
-        # response = b'\xff' * req.length
-        response = b''
+        response = b'\xff' * req.length
         return response
 
     @mutable('hid_get_idle_response')
@@ -62,7 +61,7 @@ class USBKeyboardInterface(USBInterface):
 
         endpoint = USBEndpoint(
             app=app,
-            number=3,
+            number=2,
             direction=USBEndpoint.direction_in,
             transfer_type=USBEndpoint.transfer_type_interrupt,
             sync_type=USBEndpoint.sync_type_none,
@@ -94,6 +93,7 @@ class USBKeyboardInterface(USBInterface):
         # text = []
 
         self.keys = [chr(x) for x in empty_preamble + text]
+        self.call_count = 0
 
     @mutable('hid_descriptor')
     def get_hid_descriptor(self, *args, **kwargs):
@@ -170,18 +170,27 @@ class USBKeyboardInterface(USBInterface):
         return report_descriptor
 
     def handle_buffer_available(self):
-        self.supported()
-        if self.keys:
-            letter = self.keys.pop(0)
-            self.type_letter(letter)
+        #
+        # this is really ugly, but sometimes the host expects
+        # (during initialization) to get the report on ep0 and
+        # ignores the actual ep (2 in this case), we'll just
+        # wait for a little bit... (see section 7.2.1 in HID spec)
+        #
+        if self.call_count > 100:
+            self.supported()
+            if self.keys:
+                letter = self.keys.pop(0)
+                self.type_letter(letter)
+        else:
+            self.call_count += 1
 
     def type_letter(self, letter, modifiers=0):
         data = bytes([0, 0, ord(letter)])
 
-        if self.verbose > 2:
+        if self.verbose > 1:
             print(self.name, "sending keypress 0x%02x" % ord(letter))
 
-        self.configuration.device.app.send_on_endpoint(3, data)
+        self.configuration.device.app.send_on_endpoint(2, data)
 
 
 class USBKeyboardDevice(USBDevice):
