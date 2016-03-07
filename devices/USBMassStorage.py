@@ -143,10 +143,6 @@ class USBMassStorageInterface(USBInterface):
         self.write_length = 0
         self.write_data = b''
 
-        self.format_capacities_list = [
-            (0x00001000, 0x00, 0x000200),
-        ]
-
         self.operations = {
             ScsiCmds.INQUIRY: self.handle_inquiry,
             ScsiCmds.REQUEST_SENSE: self.handle_request_sense,
@@ -221,9 +217,9 @@ class USBMassStorageInterface(USBInterface):
         if self.verbose > 0:
             print(self.name, "got SCSI Read Capacity, data", bytes_as_hex(cbw.cb[1:]))
         lastlba = self.disk_image.get_sector_count()
-        logical_block_address = pack('<I', lastlba)
-        length = 0x00020000
-        response = logical_block_address + pack('<I', length)
+        logical_block_address = pack('>I', lastlba)
+        length = 0x00000200
+        response = logical_block_address + pack('>I', length)
         return response
 
     @mutable('scsi_send_diagnostic_response')
@@ -260,7 +256,7 @@ class USBMassStorageInterface(USBInterface):
         if self.app.mode == 4:
             self.app.stop = True
 
-        base_lba = unpack('>I', cbw.cb[1:5])[0]
+        base_lba = unpack('>I', cbw.cb[2:6])[0]
         num_blocks = unpack('>H', cbw.cb[7:9])[0]
 
         if self.verbose > 0:
@@ -328,15 +324,17 @@ class USBMassStorageInterface(USBInterface):
     def handle_read_format_capacities(self, cbw):
         if self.verbose > 0:
             print(self.name, "got SCSI Read Format Capacity")
-        response = pack('>I', len(self.format_capacities_list) * 8)
-        for block_num, desc_code, block_len in self.format_capacities_list:
-            response += pack('>IB', block_num, desc_code)
-            response += pack('>I', block_len)[1:]
+        # header
+        response = pack('>I', 8)
+        num_sectors = 0x1000
+        reserved = 0x1000
+        sector_size = 0x200
+        response += pack('>IHH', num_sectors, reserved, sector_size)
         return response
 
     def handle_synchronize_cache(self, cbw):
         if self.verbose > 0:
-                print(self.name, "got Synchronize Cache (10)")
+            print(self.name, "got Synchronize Cache (10)")
 
     def handle_data_available(self, data):
         if self.verbose > 0:
@@ -447,12 +445,7 @@ class CommandBlockWrapper:
     def __init__(self, bytestring):
         self.signature = bytestring[0:4]
         self.tag = bytestring[4:8]
-        self.data_transfer_length = (
-            bytestring[8] |
-            bytestring[9] << 8 |
-            bytestring[10] << 16 |
-            bytestring[11] << 24
-        )
+        self.data_transfer_length = unpack('<I', bytestring[8:12])[0]
         self.flags = int(bytestring[12])
         self.lun = int(bytestring[13] & 0x0f)
         self.cb_length = int(bytestring[14] & 0x1f)
@@ -475,7 +468,7 @@ class USBMassStorageDevice(USBDevice):
     name = "USB mass storage device"
 
     def __init__(self, app, vid, pid, rev, usbclass, subclass, proto, disk_image_filename='stick.img', verbose=0):
-        self.disk_image = DiskImage(disk_image_filename, 512)
+        self.disk_image = DiskImage(disk_image_filename, 0x200)
         interface = USBMassStorageInterface(app, self.disk_image, usbclass, subclass, proto, verbose=verbose)
 
         config = USBConfiguration(
@@ -504,4 +497,3 @@ class USBMassStorageDevice(USBDevice):
     def disconnect(self):
         self.disk_image.close()
         USBDevice.disconnect(self)
-
