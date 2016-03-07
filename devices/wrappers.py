@@ -19,7 +19,7 @@ def mutable(stage):
                 print(traceback.format_exc())
                 print(''.join(traceback.format_stack()))
                 raise e
-            if response:
+            if response is not None:
                 print('[>] %s' % binascii.hexlify(response))
             return response
         return wrapper
