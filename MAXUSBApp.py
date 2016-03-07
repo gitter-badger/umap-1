@@ -301,7 +301,7 @@ class MAXUSBApp(FacedancerApp):
                 except:
                     traceback.print_exc()
                     print('umap ignored the exception for some reason... will need to address that later on')
-                    pass
+                    raise
 
             if irq & self.is_in3_buffer_avail:
                 try:
@@ -309,7 +309,7 @@ class MAXUSBApp(FacedancerApp):
                 except:
                     traceback.print_exc()
                     print('umap ignored the exception for some reason... will need to address that later on')
-                    pass
+                    raise
             tmp_irq = irq
             self.check_connection_commands()
         self.disconnect()
