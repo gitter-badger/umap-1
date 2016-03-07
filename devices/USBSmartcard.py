@@ -27,24 +27,14 @@ class ClassRequests(IntEnum):
 class USBSmartcardClass(USBClass):
     name = "USB Smartcard class"
 
-    def setup_request_handlers(self):
+    def setup_local_handlers(self):
         self.local_handlers = {
             # ClassRequests.ABORT: ('scd_abort_response', self.handle_abort),
-            ClassRequests.GET_CLOCK_FREQUENCIES: ('scd_get_clock_frequencies_response', self.handle_get_clock_frequencies),
-            ClassRequests.GET_DATA_RATES: ('scd_get_data_rates_response', self.handle_get_data_rates),
-        }
-        self.request_handlers = {
-            x: self.handle_all for x in self.local_handlers
+            ClassRequests.GET_CLOCK_FREQUENCIES: self.handle_get_clock_frequencies,
+            ClassRequests.GET_DATA_RATES: self.handle_get_data_rates,
         }
 
-    def handle_all(self, req):
-        stage, handler = self.local_handlers[req.request]
-        response = self.get_mutation(stage=stage)
-        if response is None:
-            response = handler(req)
-        self.app.send_on_endpoint(0, response)
-        self.supported()
-
+    @mutable('get_clock_frequencies_response')
     def handle_get_clock_frequencies(self, req):
         response = ''
         for frequency in interface.clock_frequencies:
@@ -52,6 +42,7 @@ class USBSmartcardClass(USBClass):
         response = pack('<I', len(response)) + response
         return response
 
+    @mutable('get_data_rates_response')
     def handle_get_data_rates(self, req):
         response = ''
         for data_rate in interface.data_rates:

@@ -21,5 +21,17 @@ class USBClass(USBBaseActor):
         self.interface = interface
 
     def setup_request_handlers(self):
-        """To be overridden for subclasses to modify self.class_request_handlers"""
-        pass
+        self.setup_local_handlers()
+        self.request_handlers = {
+            x: self.handle_all for x in self.local_handlers
+        }
+
+    def setup_local_handlers(self):
+        self.local_handlers = {}
+
+    def handle_all(self, req):
+        handler = self.local_handlers[req.request]
+        response = handler(req)
+        if response is not None:
+            self.app.send_on_endpoint(0, response)
+        self.supported()

@@ -59,29 +59,18 @@ class ScsiSenseKeys(IntEnum):
 class USBMassStorageClass(USBClass):
     name = "USB mass storage class"
 
-    def setup_request_handlers(self):
+    def setup_local_handlers(self):
         self.local_handlers = {
-            0xFF: ('bulk_only_mass_storage_reset_response', self.handle_bulk_only_mass_storage_reset_request),
-            0xFE: ('get_max_lun_response', self.handle_get_max_lun_request)
+            0xFF: self.handle_bulk_only_mass_storage_reset,
+            0xFE: self.handle_get_max_lun,
         }
-
-        self.request_handlers = {
-            x: self.handle_all for x in self.local_handlers
-        }
-
-    def handle_all(self, req):
-        stage, handler = self.local_handlers[req.request]
-        response = handler(req)
-        if response is not None:
-            self.app.send_on_endpoint(0, response)
-        # self.supported()
 
     @mutable('bulk_only_mass_storage_reset_response')
-    def handle_bulk_only_mass_storage_reset_request(self, req):
+    def handle_bulk_only_mass_storage_reset(self, req):
         return b''
 
     @mutable('get_max_lun_response')
-    def handle_get_max_lun_request(self, req):
+    def handle_get_max_lun(self, req):
         return b'\x00'
 
 

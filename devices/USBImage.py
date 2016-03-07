@@ -24,23 +24,13 @@ from binascii import hexlify
 class USBImageClass(USBClass):
     name = "USB image class"
 
-    def setup_request_handlers(self):
+    def setup_local_handlers(self):
         self.local_handlers = {
-            0x66: ('image_device_reset_response', self.handle_device_reset_request),
-        }
-        self.request_handlers = {
-            x: self.handle_all for x in self.local_handlers
+            0x66: self.handle_device_reset,
         }
 
-    def handle_all(self, req):
-        stage, handler = self.local_handlers[req.request]
-        response = self.get_mutation(stage=stage)
-        if response is None:
-            response = handler(req)
-        self.app.send_on_endpoint(0, response)
-        self.supported()
-
-    def handle_device_reset_request(self, req):
+    @mutable('image_device_reset_response')
+    def handle_device_reset(self, req):
         return b''
 
 

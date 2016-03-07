@@ -24,37 +24,29 @@ class Requests(IntEnum):
 class USBKeyboardClass(USBClass):
     name = "USB Keyboard class"
 
-    def setup_request_handlers(self):
+    def setup_local_handlers(self):
         self.local_handlers = {
-            Requests.GET_REPORT: ('hid_get_report', self.handle_get_report),
-            Requests.GET_IDLE: ('hid_get_idle', self.handle_get_idle),
-            Requests.SET_REPORT: ('hid_set_report', self.handle_set_report),
-            Requests.SET_IDLE: ('hid_set_idle', self.handle_set_idle),
-        }
-        self.request_handlers = {
-            x: self.handle_all for x in self.local_handlers
+            Requests.GET_REPORT: self.handle_get_report,
+            Requests.GET_IDLE: self.handle_get_idle,
+            Requests.SET_REPORT: self.handle_set_report,
+            Requests.SET_IDLE: self.handle_set_idle,
         }
 
-    def handle_all(self, req):
-        print('[*] in handle all')
-        stage, handler = self.local_handlers[req.request]
-        response = self.get_mutation(stage=stage)
-        if response is None:
-            response = handler(req)
-        self.app.send_on_endpoint(0, response)
-        # self.supported()
-
+    @mutable('hid_get_report_response')
     def handle_get_report(self, req):
         # response = b'\xff' * req.length
         response = b''
         return response
 
+    @mutable('hid_get_idle_response')
     def handle_get_idle(self, req):
         return b''
 
+    @mutable('hid_set_report_response')
     def handle_set_report(self, req):
         return b''
 
+    @mutable('hid_set_idle_response')
     def handle_set_idle(self, req):
         return b''
 

@@ -15,27 +15,44 @@ from .wrappers import mutable
 class USBAudioClass(USBClass):
     name = "USB Audio class"
 
-    def setup_request_handlers(self):
-        self.local_responses = {
-            0x0a: ('audio_set_idle_response', b''),
-            0x83: ('audio_get_max_response', b'\xf0\xff'),
-            0x82: ('audio_get_min_response', b'\xa0\xe0'),
-            0x84: ('audio_get_res_response', b'\x30\x00'),
-            0x81: ('audio_get_cur_response', b''),
-            0x04: ('audio_set_res_response', b''),
-            0x01: ('audio_set_cur_response', b'')
-        }
-        self.request_handlers = {
-            x: self.handle_all for x in self.local_responses
+    def setup_local_handlers(self):
+        self.local_handlers = {
+            0x0a: self.handle_audio_set_idle,
+            0x83: self.handle_audio_get_max,
+            0x82: self.handle_audio_get_min,
+            0x84: self.handle_audio_get_res,
+            0x81: self.handle_audio_get_cur,
+            0x04: self.handle_audio_set_res,
+            0x01: self.handle_audio_set_cur,
         }
 
-    def handle_all(self, req):
-        stage, default_response = self.local_responses[req.request]
-        response = self.get_mutation(stage=stage)
-        if response is None:
-            response = default_response
-        self.app.send_on_endpoint(0, response)
-        self.supported()
+    @mutable('audio_set_idle_response')
+    def handle_audio_set_idle(self, req):
+        return b''
+
+    @mutable('audio_get_max_response')
+    def handle_audio_get_max(self, req):
+        return b'\xf0\xff'
+
+    @mutable('audio_get_min_response')
+    def handle_audio_get_min(self, req):
+        return b'\xa0\xe0'
+
+    @mutable('audio_get_res_response')
+    def handle_audio_get_res(self, req):
+        return b'\x30\x00'
+
+    @mutable('audio_get_cur_response')
+    def handle_audio_get_cur(self, req):
+        return b''
+
+    @mutable('audio_set_res_response')
+    def handle_audio_set_res(self, req):
+        return b''
+
+    @mutable('audio_set_cur_response')
+    def handle_audio_set_cur(self, req):
+        return b''
 
 
 class USBAudioInterface(USBInterface):

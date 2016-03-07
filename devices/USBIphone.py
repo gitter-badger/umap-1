@@ -15,18 +15,20 @@ from USBVendor import *
 class USBIphoneVendor(USBVendor):
     name = "USB iPhone vendor"
 
-    def setup_request_handlers(self):
-        self.request_handlers = {
-             0x40: self.handle_40_request,
-             0x45: self.handle_45_request
+    def setup_local_handlers(self):
+        self.local_handlers = {
+             0x40: self.handle_40,
+             0x45: self.handle_45
         }
 
-    def handle_40_request(self, req):
+    @mutable('40_response')
+    def handle_40(self, req):
         if self.verbose > 0:
             print(self.name, "received reset request")
         self.device.app.send_on_endpoint(0, b'')
 
-    def handle_45_request(self, req):
+    @mutable('45_response')
+    def handle_45(self, req):
         if self.verbose > 0:
             print(self.name, "received reset request")
         self.device.app.send_on_endpoint(0, b'\x03')

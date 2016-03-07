@@ -11,28 +11,19 @@ from USBInterface import *
 from USBEndpoint import *
 from USBClass import *
 from util import *
+from .wrappers import mutable
 
 
 class USBPrinterClass(USBClass):
     name = "USB printer class"
 
-    def setup_request_handlers(self):
+    def setup_local_handlers(self):
         self.local_handlers = {
-            0x00: ('get_device_id_response', self.handle_get_device_id_request),
-        }
-        self.request_handlers = {
-            x: self.handle_all for x in self.local_handlers
+            0x00: self.handle_get_device_id,
         }
 
-    def handle_all(self, req):
-        stage, handler = self.local_handlers[req.request]
-        response = self.get_mutation(stage=stage)
-        if response is None:
-            response = handler(req)
-        self.app.send_on_endpoint(0, response)
-        self.supported()
-
-    def handle_get_device_id_request(self, req):
+    @mutable('get_device_id_response')
+    def handle_get_device_id(self, req):
         device_id_dict = {
             'MFG': 'Hewlett-Packard',
             'CMD': 'PJL,PML,PCLXL,POSTSCRIPT,PCL',

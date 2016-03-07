@@ -13,27 +13,18 @@ from .wrappers import mutable
 class USBHubClass(USBClass):
     name = "USB hub class"
 
-    def setup_request_handlers(self):
+    def setup_local_handlers(self):
         self.local_handlers = {
-            0x00: ('hub_get_hub_status', self.handle_get_hub_status_request),
-            0x03: ('hub_set_port_feature', self.handle_set_port_feature_request),
-        }
-        self.request_handlers = {
-            x: self.handle_all for x in self.local_handlers
+            0x00: self.handle_get_hub_status,
+            0x03: self.handle_set_port_feature,
         }
 
-    def handle_all(self, req):
-        stage, handler = self.local_handlers[req.request]
-        response = self.get_mutation(stage=stage)
-        if response is None:
-            response = handler(req)
-        self.app.send_on_endpoint(0, response)
-        self.supported()
-
-    def handle_get_hub_status_request(self, req):
+    @mutable('hub_get_hub_status_response')
+    def handle_get_hub_status(self, req):
         return b'\x61\x61\x61\x61'
 
-    def handle_set_port_feature_request(self, req):
+    @mutable('hub_set_port_feature_response')
+    def handle_set_port_feature(self, req):
         return b''
 
 

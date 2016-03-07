@@ -18,22 +18,19 @@ from .wrappers import mutable
 class USBCDCClass(USBClass):
     name = "USB CDC class"
 
-    def setup_request_handlers(self):
-        self.local_responses = {
-            0x22: ('cdc_set_control_line_state', b''),
-            0x20: ('cdc_set_line_coding', b'')
-        }
-        self.request_handlers = {
-            x: self.handle_all for x in self.local_responses
+    def setup_local_handlers(self):
+        self.local_handlers = {
+            0x22: handle_cdc_set_control_line_state,
+            0x20: handle_cdc_set_line_coding,
         }
 
-    def handle_all(self, req):
-        stage, default_response = self.local_responses[req.request]
-        response = self.get_mutation(stage=stage)
-        if response is None:
-            response = default_response
-        self.app.send_on_endpoint(0, response)
-        self.supported()
+    @mutable('cdc_set_control_line_state_response')
+    def handle_cdc_set_control_line_state(self, req):
+        return b''
+
+    @mutable('cdc_set_line_coding_response')
+    def handle_cdc_set_line_coding_response(self, req):
+        return b''
 
 
 class USBCDCInterface(USBInterface):
