@@ -13,6 +13,8 @@ Released under AGPL see LICENSE for more information
 
 ## Documentation
 
+[![Join the chat at https://gitter.im/BinyaminSharet/umap](https://badges.gitter.im/BinyaminSharet/umap.svg)](https://gitter.im/BinyaminSharet/umap?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 https://github.com/nccgroup/umap/wiki/umap-documentation
 
 ## Pre-requisites
